@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import { AuditService } from '../../common/audit.service';
@@ -131,7 +132,11 @@ export class DocumentsService {
 
     const obj = await this.storage.head(d.s3_key);
     if (!obj) throw new ConflictException('File not uploaded yet');
-    if (obj.size !== Number(d.size_bytes) || (obj.sha256 !== null && obj.sha256 !== d.sha256)) {
+    // Some S3-compatible stores neither enforce nor return the SHA-256 checksum:
+    // then hash the stored bytes here, so a tampered upload is never accepted.
+    const sha256 =
+      obj.sha256 ?? (obj.size === Number(d.size_bytes) ? createHash('sha256').update(await this.storage.get(d.s3_key)).digest('hex') : null);
+    if (obj.size !== Number(d.size_bytes) || sha256 !== d.sha256) {
       await this.storage.delete(d.s3_key);
       await tx.query(`UPDATE documents SET status = 'REJECTED' WHERE id = $1`, [id]);
       await this.audit.record(tx, { action: 'document.rejected', entityType: 'DOCUMENT', entityId: id, newValue: { reason: 'checksum mismatch' } });
