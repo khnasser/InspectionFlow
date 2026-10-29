@@ -1,0 +1,11 @@
+# Use Keycloak sign-in instead of the development login:
+#   docker compose -f docker-compose.yml -f docker-compose.oidc.yml up --build
+services:
+  api:
+    depends_on: [keycloak]
+    environment:
+      AUTH_MODE: oidc
+      OIDC_ISSUER: http://localhost:8081/realms/inspectionflow-demo
+      OIDC_JWKS_URL: http://keycloak:8080/realms/inspectionflow-demo/protocol/openid-connect/certs
+      OIDC_AUDIENCE: inspectionflow-api
+      TENANT_CLAIM: tenant

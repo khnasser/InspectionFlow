@@ -24,6 +24,22 @@ export class SystemController {
     return { status: 'ok', authMode: this.appConfig.authMode, time: new Date().toISOString() };
   }
 
+  /** How clients should sign in (public): dev form, or OIDC authorization code + PKCE. */
+  @Public()
+  @Get('v1/auth/config')
+  authConfig() {
+    const c = this.appConfig;
+    return c.authMode === 'dev'
+      ? { mode: 'dev' }
+      : {
+          mode: 'oidc',
+          issuer: c.oidcIssuer,
+          webClientId: c.oidcWebClientId,
+          mobileClientId: c.oidcMobileClientId,
+          scope: 'openid profile email',
+        };
+  }
+
   /** Development sign-in (AUTH_MODE=dev only). Production uses Keycloak / UAE PASS tokens. */
   @Public()
   @Post('v1/dev/login')

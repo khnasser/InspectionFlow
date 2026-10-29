@@ -7,10 +7,11 @@ export interface AppConfig {
   oidcIssuer?: string;
   oidcAudience?: string;
   oidcJwksUrl?: string;
-  /** JWT claim carrying the tenant id (Keycloak mapper). */
+  /** OIDC token claim carrying the tenant code or id (Keycloak user-attribute mapper). */
   tenantClaim: string;
-  /** JWT claim carrying role codes. */
-  rolesClaim: string;
+  /** Public OIDC client ids the web and mobile apps use (authorization code + PKCE). */
+  oidcWebClientId: string;
+  oidcMobileClientId: string;
   paymentWebhookSecret: string;
   publicBaseUrl: string;
 }
@@ -35,8 +36,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     oidcIssuer: env.OIDC_ISSUER,
     oidcAudience: env.OIDC_AUDIENCE,
     oidcJwksUrl: env.OIDC_JWKS_URL,
-    tenantClaim: env.TENANT_CLAIM ?? 'tid',
-    rolesClaim: env.ROLES_CLAIM ?? 'roles',
+    tenantClaim: env.TENANT_CLAIM ?? 'tenant',
+    oidcWebClientId: env.OIDC_WEB_CLIENT_ID ?? 'inspectionflow-web',
+    oidcMobileClientId: env.OIDC_MOBILE_CLIENT_ID ?? 'inspectionflow-mobile',
     paymentWebhookSecret: env.PAYMENT_WEBHOOK_SECRET ?? 'dev-webhook-secret',
     publicBaseUrl: env.PUBLIC_BASE_URL ?? 'http://localhost:3000',
   };

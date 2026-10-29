@@ -5,6 +5,7 @@ import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { session } from './api';
+import { signOut } from './auth';
 import { DelegateModal } from './components/DelegateModal';
 import { I18nProvider, useI18n } from './i18n';
 import { InspectableDetail } from './pages/InspectableDetail';
@@ -57,7 +58,7 @@ function Shell() {
           {screens.md && <Typography.Text style={{ color: '#cfd8e3' }}>{session.user.name}</Typography.Text>}
           <Button size="small" onClick={() => setDelegateOpen(true)}>{screens.sm ? t('delegate') : '⇄'}</Button>
           <Button size="small" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}>{lang === 'ar' ? 'EN' : 'ع'}</Button>
-          <Button size="small" onClick={() => { session.clear(); force((n) => n + 1); nav('/'); }}>{t('signOut')}</Button>
+          <Button size="small" onClick={() => { signOut(); force((n) => n + 1); }}>{t('signOut')}</Button>
         </Space>
       </Layout.Header>
       {!screens.md && (

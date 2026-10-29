@@ -2,6 +2,11 @@ export type Lang = 'ar' | 'en';
 
 const d = {
   signIn: ['تسجيل الدخول', 'Sign in'],
+  signInUaePass: ['الدخول بالهوية الرقمية (UAE PASS)', 'Sign in with UAE PASS'],
+  signInStaff: ['دخول الموظفين', 'Staff sign-in'],
+  evidence: ['الأدلة المصورة', 'Photo evidence'],
+  takePhoto: ['التقاط صورة', 'Take photo'],
+  uploading: ['جاري رفع الصور', 'Uploading photos'],
   server: ['عنوان الخادم', 'Server URL'],
   tenant: ['الجهة', 'Organisation'],
   email: ['البريد الإلكتروني', 'Email'],

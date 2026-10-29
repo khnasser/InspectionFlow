@@ -1,0 +1,290 @@
+{
+  "realm": "inspectionflow-demo",
+  "displayName": "InspectionFlow — Demo",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 28800,
+  "ssoSessionMaxLifespan": 43200,
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "ar",
+    "en"
+  ],
+  "defaultLocale": "ar",
+  "clients": [
+    {
+      "clientId": "inspectionflow-web",
+      "name": "inspectionflow-web",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:8080/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://localhost:8080"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      },
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "web-origins",
+        "roles"
+      ],
+      "protocolMappers": [
+        {
+          "name": "audience-inspectionflow-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "inspectionflow-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "tenant",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {
+            "claim.name": "tenant",
+            "claim.value": "DEMO-AUTH",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "inspectionflow-mobile",
+      "name": "inspectionflow-mobile",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "inspectionflow://*",
+        "exp://*"
+      ],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      },
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "web-origins",
+        "roles"
+      ],
+      "protocolMappers": [
+        {
+          "name": "audience-inspectionflow-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "inspectionflow-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "tenant",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "config": {
+            "claim.name": "tenant",
+            "claim.value": "DEMO-AUTH",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "uaepass",
+      "displayName": "UAE PASS",
+      "providerId": "oidc",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "linkOnly": false,
+      "config": {
+        "authorizationUrl": "https://stg-id.uaepass.ae/idshub/authorize",
+        "tokenUrl": "https://stg-id.uaepass.ae/idshub/token",
+        "userInfoUrl": "https://stg-id.uaepass.ae/idshub/userinfo",
+        "logoutUrl": "https://stg-id.uaepass.ae/idshub/logout",
+        "clientId": "sandbox_stage",
+        "clientSecret": "sandbox_stage",
+        "clientAuthMethod": "client_secret_basic",
+        "defaultScope": "urn:uae:digitalid:profile:general",
+        "disableUserInfo": "false",
+        "validateSignature": "false",
+        "syncMode": "IMPORT",
+        "forwardParameters": "acr_values,ui_locales",
+        "uiLocales": "true"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "email",
+      "identityProviderAlias": "uaepass",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "claim": "email",
+        "user.attribute": "email"
+      }
+    },
+    {
+      "name": "first-name",
+      "identityProviderAlias": "uaepass",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "claim": "firstnameEN",
+        "user.attribute": "firstName"
+      }
+    },
+    {
+      "name": "last-name",
+      "identityProviderAlias": "uaepass",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "claim": "lastnameEN",
+        "user.attribute": "lastName"
+      }
+    },
+    {
+      "name": "emirates-id",
+      "identityProviderAlias": "uaepass",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "claim": "idn",
+        "user.attribute": "emiratesId"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "ahmed",
+      "email": "ahmed@demoauth.inspectionflow.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Ahmed",
+      "lastName": "Al Mansoori",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Demo#2026",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "omar",
+      "email": "omar@demoauth.inspectionflow.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Omar",
+      "lastName": "Haddad",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Demo#2026",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "sara",
+      "email": "sara@demoauth.inspectionflow.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Sara",
+      "lastName": "Al Suwaidi",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Demo#2026",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "khalid",
+      "email": "khalid@demoauth.inspectionflow.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Khalid",
+      "lastName": "Al Falasi",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Demo#2026",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "ceo",
+      "email": "ceo@demoauth.inspectionflow.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Mariam",
+      "lastName": "Al Hashimi",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Demo#2026",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "admin",
+      "email": "admin@demoauth.inspectionflow.test",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Platform",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Demo#2026",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

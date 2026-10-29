@@ -6,12 +6,33 @@
     "orientation": "default",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "ios": { "supportsTablet": true, "bundleIdentifier": "ae.inspectionflow.mobile" },
-    "android": { "package": "ae.inspectionflow.mobile" },
-    "extra": { "supportsRTL": true, "forcesRTL": true },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ae.inspectionflow.mobile"
+    },
+    "android": {
+      "package": "ae.inspectionflow.mobile"
+    },
+    "extra": {
+      "supportsRTL": true,
+      "forcesRTL": true
+    },
     "plugins": [
-      ["expo-sqlite", { "useSQLCipher": true }],
-      "expo-secure-store"
-    ]
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "InspectionFlow uses the camera to capture inspection evidence.",
+          "photosPermission": "InspectionFlow attaches photos from your library as inspection evidence."
+        }
+      ]
+    ],
+    "scheme": "inspectionflow"
   }
 }
