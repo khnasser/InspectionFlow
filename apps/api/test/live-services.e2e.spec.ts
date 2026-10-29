@@ -105,6 +105,9 @@ const b64url = (b: Buffer) => b.toString('base64url');
     expect(claims.iss).toBe(issuer);
     expect([].concat(claims.aud)).toContain('inspectionflow-api');
     expect(claims.tenant).toBe('DEMO-AUTH');
+    // Keycloak 25+ only adds these through client scopes; the realm maps them explicitly.
+    expect(claims.sub).toBeTruthy();
+    expect(claims).toMatchObject({ email: 'ahmed@demoauth.inspectionflow.test', email_verified: true });
     expect(tokens.refresh_token).toBeTruthy();
 
     // Independent check of the signature against the realm's published keys.
