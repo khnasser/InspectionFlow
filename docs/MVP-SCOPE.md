@@ -18,12 +18,12 @@ Status: **Done** = implemented and covered by automated tests; **Partial** = imp
 | User delegation, auto-resolve at assignment (PRD 3.7) | Done | `AssignmentService.resolveAssignee`, exclusion constraint against overlaps |
 | Team manager dashboard, bulk reassignment (PRD 3.8) | Done | `GET /v1/team/dashboard`, `POST /v1/tasks/bulk-reassign` |
 | Digital signature, clear by senior with reason, edit lock (PRD 3.9) | Done | `client_signatures`, `POST /v1/inspections/:id/signature/clear`; signature pad in mobile app |
-| Sign-in: Keycloak, UAE PASS (PRD 7) | Partial | API OIDC verification and user linking done and tested (`oidc.e2e.spec.ts`); web (`oidc-client-ts`) and mobile (`expo-auth-session`) PKCE flows; realm export with UAE PASS staging broker. Not yet run against a live Keycloak / UAE PASS |
+| Sign-in: Keycloak, UAE PASS (PRD 7) | Partial | API OIDC verification and user linking done and tested (`oidc.e2e.spec.ts`); web (`oidc-client-ts`) and mobile (`expo-auth-session`) PKCE flows; realm export with UAE PASS staging broker. Verified against real Keycloak 26 in CI; a real UAE PASS login still needs TDRA sandbox users |
 | UAE PASS signing | Next | Blueprint §8 |
 | Billing: payment advice per inspection, statuses (PRD 3.10) | Done | `InspectionService.finalizeApproved`, `payment_advices` |
 | Payment gateways PayTabs / Checkout.com / Network International / Stripe | Partial | Signed, idempotent webhook contract done (`POST /v1/webhooks/payments`); real adapters Next |
-| Document storage MinIO/S3, photo evidence (PRD 3.11) | Done (local driver), Partial (S3) | `common/storage.ts` (S3 presigned PUT with SHA-256 checksum; local driver with signed URLs), `modules/documents`; offline photo queue in `sync-client`; camera capture in mobile; thumbnails in web; tests in `evidence-reports.e2e.spec.ts`. S3 driver not yet run against a real bucket |
-| Arabic PDF reports with QR verification (PRD 3.12) | Done (Chromium via Playwright), Partial (Gotenberg) | Report queued on approval, rendered by a worker with embedded Noto Naskh Arabic and photos, stored with SHA-256; `GET /v1/inspections/:id/report.pdf`, public `GET /verify/:code`. Excel exports Next |
+| Document storage MinIO/S3, photo evidence (PRD 3.11) | Done (local driver), Partial (S3) | `common/storage.ts` (S3 presigned PUT with SHA-256 checksum; local driver with signed URLs), `modules/documents`; offline photo queue in `sync-client`; camera capture in mobile; thumbnails in web; tests in `evidence-reports.e2e.spec.ts`. S3 driver tested against an S3-compatible server in CI; the server re-hashes uploads when the store does not enforce checksums |
+| Arabic PDF reports with QR verification (PRD 3.12) | Done (Chromium via Playwright and Gotenberg 8, both tested) | Report queued on approval, rendered by a worker with embedded Noto Naskh Arabic and photos, stored with SHA-256; `GET /v1/inspections/:id/report.pdf`, public `GET /verify/:code`. Excel exports Next |
 | CRM sync HubSpot / Salesforce / Zoho (PRD 8) | Partial | Transactional outbox events written; connectors Next |
 | Notifications SMS / email | Partial | `notifications` rows queued; delivery worker Next |
 | Audit of all actions (PRD 11) | Done | Hash-chained, append-only `audit_logs`; verify endpoint; tamper test |
@@ -32,3 +32,4 @@ Status: **Done** = implemented and covered by automated tests; **Partial** = imp
 | Oracle 19c support | Next | Sovereign edition only (blueprint §2) |
 | Configuration Studio | Next | Configuration seeded by `apps/api/scripts/seed.ts` |
 | Client portal | Next | Blueprint §6.12 |
+| Deployment: containers, Kubernetes, migrations | Done (as code), Partial (no cluster yet) | `deploy/helm/inspectionflow`, `docs/DEPLOY.md`; images built and pushed by CI; chart validated with kubeconform |
