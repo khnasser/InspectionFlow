@@ -30,11 +30,31 @@ export interface AppConfig {
   reports: {
     renderer: 'gotenberg' | 'playwright';
     gotenbergUrl: string;
-    /** Run the background report worker in this process. */
+    /** Run the background jobs (reports, notifications, outbox) in this process. */
     worker: boolean;
     workerIntervalMs: number;
     /** Public base URL printed in the QR code, e.g. https://verify.inspectionflow.ae */
     verifyBaseUrl: string;
+  };
+  /** Delivery of queued notifications (email, SMS, in-app). */
+  notifications: {
+    /** smtp in production; capture keeps messages in memory (development, tests). */
+    emailDriver: 'smtp' | 'capture';
+    smtpUrl: string;
+    emailFrom: string;
+    /** infobip (common UAE aggregator), none (SMS switched off), capture (tests). */
+    smsDriver: 'infobip' | 'none' | 'capture';
+    infobipBaseUrl: string;
+    infobipApiKey: string;
+    smsSender: string;
+    maxAttempts: number;
+  };
+  /** Outbox relay to tenant webhooks. */
+  webhooks: {
+    /** Allow webhook URLs on private / loopback addresses (development and tests only). */
+    allowPrivateTargets: boolean;
+    maxAttempts: number;
+    timeoutMs: number;
   };
 }
 
@@ -51,6 +71,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   }
   if (env.NODE_ENV === 'production' && (env.STORAGE_DRIVER ?? 'local') !== 's3') {
     throw new Error('STORAGE_DRIVER=s3 is required in production');
+  }
+  const emailDriver = (env.EMAIL_DRIVER ?? 'capture') === 'smtp' ? 'smtp' : 'capture';
+  const smsDriver = (['infobip', 'none', 'capture'] as const).find((d) => d === (env.SMS_DRIVER ?? 'capture')) ?? 'capture';
+  if (env.NODE_ENV === 'production' && (emailDriver === 'capture' || smsDriver === 'capture')) {
+    throw new Error('EMAIL_DRIVER=smtp and SMS_DRIVER=infobip|none are required in production');
   }
   return {
     port: Number(env.PORT ?? 3000),
@@ -79,9 +104,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     reports: {
       renderer: (env.REPORT_RENDERER ?? 'playwright') === 'gotenberg' ? 'gotenberg' : 'playwright',
       gotenbergUrl: env.GOTENBERG_URL ?? 'http://localhost:3001',
-      worker: (env.REPORT_WORKER ?? 'on') !== 'off',
-      workerIntervalMs: Number(env.REPORT_WORKER_INTERVAL_MS ?? 5000),
+      worker: (env.BACKGROUND_JOBS ?? env.REPORT_WORKER ?? 'on') !== 'off',
+      workerIntervalMs: Number(env.JOBS_INTERVAL_MS ?? env.REPORT_WORKER_INTERVAL_MS ?? 5000),
       verifyBaseUrl: env.VERIFY_BASE_URL ?? env.PUBLIC_BASE_URL ?? 'http://localhost:3000',
+    },
+    notifications: {
+      emailDriver,
+      smtpUrl: env.SMTP_URL ?? 'smtp://localhost:1025',
+      emailFrom: env.EMAIL_FROM ?? 'InspectionFlow <no-reply@inspectionflow.local>',
+      smsDriver,
+      infobipBaseUrl: env.INFOBIP_BASE_URL ?? '',
+      infobipApiKey: env.INFOBIP_API_KEY ?? '',
+      smsSender: env.SMS_SENDER ?? 'InspectFlow',
+      maxAttempts: Number(env.NOTIFICATION_MAX_ATTEMPTS ?? 5),
+    },
+    webhooks: {
+      allowPrivateTargets: env.WEBHOOK_ALLOW_PRIVATE === 'true',
+      maxAttempts: Number(env.WEBHOOK_MAX_ATTEMPTS ?? 8),
+      timeoutMs: Number(env.WEBHOOK_TIMEOUT_MS ?? 10000),
     },
   };
 }

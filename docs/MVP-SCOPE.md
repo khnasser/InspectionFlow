@@ -24,8 +24,8 @@ Status: **Done** = implemented and covered by automated tests; **Partial** = imp
 | Payment gateways PayTabs / Checkout.com / Network International / Stripe | Partial | Signed, idempotent webhook contract done (`POST /v1/webhooks/payments`); real adapters Next |
 | Document storage MinIO/S3, photo evidence (PRD 3.11) | Done (local driver), Partial (S3) | `common/storage.ts` (S3 presigned PUT with SHA-256 checksum; local driver with signed URLs), `modules/documents`; offline photo queue in `sync-client`; camera capture in mobile; thumbnails in web; tests in `evidence-reports.e2e.spec.ts`. S3 driver tested against an S3-compatible server in CI; the server re-hashes uploads when the store does not enforce checksums |
 | Arabic PDF reports with QR verification (PRD 3.12) | Done (Chromium via Playwright and Gotenberg 8, both tested) | Report queued on approval, rendered by a worker with embedded Noto Naskh Arabic and photos, stored with SHA-256; `GET /v1/inspections/:id/report.pdf`, public `GET /verify/:code`. Excel exports Next |
-| CRM sync HubSpot / Salesforce / Zoho (PRD 8) | Partial | Transactional outbox events written; connectors Next |
-| Notifications SMS / email | Partial | `notifications` rows queued; delivery worker Next |
+| CRM sync HubSpot / Salesforce / Zoho (PRD 8) | Partial | Outbox relay delivers every event to signed tenant webhooks with retries and per-endpoint tracking (any CRM / iPaaS can consume them); native CRM connectors Next |
+| Notifications SMS / email / in-app | Done (email, in-app), Partial (SMS) | Delivery worker with retries and backoff, tenant quiet hours for SMS, bilingual templates with tenant overrides, letters with the issued PDF attached, delivery monitor; SMTP for email; Infobip SMS adapter not yet run against a live account; WhatsApp and push Next |
 | Audit of all actions (PRD 11) | Done | Hash-chained, append-only `audit_logs`; verify endpoint; tamper test |
 | Security: JWT, RLS, AES-256 | Partial | JWT (dev HS256 / OIDC JWKS), RLS, SQLCipher on device; at-rest encryption is a hosting setting |
 | Performance: task list < 500 ms | Partial | Indexed inbox query; load test (k6) Next |

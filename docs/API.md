@@ -45,3 +45,15 @@ All routes except `/health`, `/v1/auth/config`, `/v1/dev/login`, `/v1/webhooks/p
 | POST | `/v1/sync/push` | INSPECTOR, SENIOR_INSPECTOR | Batch of offline mutations; per-item result |
 | GET | `/v1/sync/pull` | any | Work package and occurrence history |
 | GET | `/v1/audit/verify` | ADMIN, SECTION_MANAGER | Recompute the tenant's audit hash chain |
+| GET | `/v1/me/notifications` | any | In-app notifications for the caller |
+| POST | `/v1/me/notifications/:id/read` | the recipient | Mark as read |
+| GET | `/v1/admin/notifications?status=` | ADMIN | Delivery monitor (addresses masked) |
+| GET / PUT | `/v1/admin/notification-templates` | ADMIN | Effective templates; override one `{code, channel, locale, subject?, body}` |
+| GET / POST | `/v1/admin/webhooks` | ADMIN | List / create `{name, url, eventTypes[]}`; the signing secret is returned once |
+| DELETE | `/v1/admin/webhooks/:id` | ADMIN | Deactivate |
+| GET | `/v1/admin/webhooks/:id/deliveries` | ADMIN | Delivery attempts |
+| POST | `/v1/admin/jobs/run` | ADMIN | Run reports, notifications and the outbox relay now |
+
+### Webhook format
+
+`POST` to the subscriber with JSON `{id, type, occurredAt, tenantId, subject: {type, id}, data}` and headers `X-InspectionFlow-Event`, `X-InspectionFlow-Delivery` (the event id: ignore repeats) and `X-InspectionFlow-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256 of "t.body" with the subscription secret>`. Any 2xx is success; anything else is retried with exponential backoff (up to 8 attempts, at most 6 hours apart). Only https URLs that resolve to public addresses are accepted.

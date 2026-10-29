@@ -35,6 +35,11 @@ config:
   S3_ENDPOINT: ""              # set for MinIO or another S3-compatible store
   S3_FORCE_PATH_STYLE: "false"
   REPORT_RENDERER: gotenberg
+  EMAIL_DRIVER: smtp           # SMTP_URL in the secret (Amazon SES, Microsoft 365, own relay)
+  EMAIL_FROM: "InspectionFlow <no-reply@example.ae>"
+  SMS_DRIVER: none             # infobip once INFOBIP_BASE_URL / INFOBIP_API_KEY are set
+  INFOBIP_BASE_URL: ""
+  SMS_SENDER: InspectFlow
   MAX_UPLOAD_BYTES: "26214400"
   CORS_ORIGIN: ""              # defaults to https://<host>
 
@@ -42,7 +47,8 @@ config:
 # vault by External Secrets) or let the chart create one from `secrets.values`.
 # Keys: DATABASE_URL (inspectionflow_api login), DATABASE_ADMIN_URL (owner, for
 # migrations), PAYMENT_WEBHOOK_SECRET, STORAGE_SIGNING_SECRET, and for S3 static
-# keys AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (omit when using workload identity).
+# keys AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (omit when using workload identity),
+# SMTP_URL (smtp(s)://user:pass@host:port) and INFOBIP_API_KEY when SMS is on.
 secrets:
   existingSecret: ""
   values: {}
@@ -63,8 +69,8 @@ api:
     maxReplicas: 8
     targetCPUUtilizationPercentage: 70
 
-# Report worker: same image, renders issued PDFs (REPORT_WORKER=on); the API
-# pods run with the worker off so rendering never competes with requests.
+# Worker: same image, runs the background jobs (issued PDFs, notifications,
+# outbox webhooks) with BACKGROUND_JOBS=on; API pods run with it off.
 worker:
   replicas: 1
   intervalMs: 5000

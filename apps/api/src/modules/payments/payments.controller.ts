@@ -16,6 +16,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { z } from 'zod';
 import { AuditService, canonicalJson } from '../../common/audit.service';
 import { AuthUser, CurrentUser, Public } from '../../common/auth';
+import { payLinkUrl } from '../../common/pay-link';
 import { APP_CONFIG, AppConfig } from '../../common/config';
 import { DbService } from '../../common/db.service';
 import { emitEvent } from '../../common/outbox';
@@ -85,8 +86,7 @@ export class PaymentsController {
       const pa = await tx.maybeOne(`SELECT id, pa_number, amount, status FROM payment_advices WHERE id = $1`, [id]);
       if (!pa) throw new NotFoundException('Payment advice not found');
       if (pa.status === 'PAID') throw new BadRequestException('Already paid');
-      const token = createHmac('sha256', this.config.paymentWebhookSecret).update(`${user.tenantId}:${id}`).digest('hex').slice(0, 32);
-      return { url: `${this.config.publicBaseUrl}/pay/${id}?t=${token}`, number: pa.pa_number, amount: Number(pa.amount) };
+      return { url: payLinkUrl(this.config, user.tenantId, id), number: pa.pa_number, amount: Number(pa.amount) };
     });
   }
 

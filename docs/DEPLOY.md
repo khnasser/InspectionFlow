@@ -33,6 +33,8 @@ The platform ships as two container images and a Helm chart. Nothing in the char
 | `PAYMENT_WEBHOOK_SECRET` | random, 32+ characters, shared with the payment gateway adapter |
 | `STORAGE_SIGNING_SECRET` | random, 32+ characters |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | only without workload identity |
+| `SMTP_URL` | `smtps://user:password@email-smtp.me-central-1.amazonaws.com:465` or your relay |
+| `INFOBIP_API_KEY` | only with `SMS_DRIVER=infobip` |
 
 ## 2. Install
 
@@ -55,7 +57,8 @@ For a demo tenant, run the seed once from a workstation with the owner connectio
 2. Sign in on the web with a staff account and with UAE PASS (staging users from the TDRA sandbox).
 3. On a phone with the development build: download tasks, switch to airplane mode, complete an inspection with two photos and a signature, reconnect, confirm it syncs.
 4. Approve it on the web; within a minute the issued PDF appears under *Issued reports*; open its verification link on a phone.
-5. `GET /v1/audit/verify` as an admin → `ok: true`.
+5. The owner's email receives the payment advice and the letter with the PDF attached; `GET /v1/admin/notifications` shows them `SENT` (SMS waits outside quiet hours, default 22:00–07:00).
+6. `GET /v1/audit/verify` as an admin → `ok: true`.
 
 ## 4. What is verified automatically
 

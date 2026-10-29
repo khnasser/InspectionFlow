@@ -1,3 +1,4 @@
+import { queueNotification } from '../../common/outbox';
 import { Injectable } from '@nestjs/common';
 import { TenantTx } from '../../common/db.service';
 
@@ -62,6 +63,23 @@ export class AssignmentService {
         t.formKey ?? null,
       ],
     );
+    if (assignee) {
+      const site = t.logId
+        ? await tx.maybeOne<{ name: string }>(
+            `SELECT ins.name FROM inspection_logs l JOIN inspectables ins ON ins.id = l.inspectable_id WHERE l.id = $1`,
+            [t.logId],
+          )
+        : null;
+      await queueNotification(tx, {
+        recipientType: 'USER',
+        recipientId: assignee,
+        channel: 'IN_APP',
+        templateCode: 'TASK_ASSIGNED',
+        payload: { taskId: row.id, taskType: t.taskType, siteName: site?.name ?? '', dueDate: t.dueAt ? String(t.dueAt).slice(0, 10) : '-' },
+        entityType: 'TASK',
+        entityId: row.id,
+      });
+    }
     return { id: row.id, assigneeId: assignee };
   }
 

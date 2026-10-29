@@ -10,6 +10,11 @@ import { ConfigService } from './modules/config/config.service';
 import { DocumentsController } from './modules/documents/documents.controller';
 import { DocumentsService } from './modules/documents/documents.service';
 import { createPdfRenderer, PDF_RENDERER } from './modules/reports/pdf';
+import { createEmailSender, createSmsSender, EMAIL_SENDER, SMS_SENDER } from './modules/notifications/channels';
+import { JobsService } from './modules/notifications/jobs.service';
+import { NotificationsController } from './modules/notifications/notifications.controller';
+import { NotificationsService } from './modules/notifications/notifications.service';
+import { OutboxRelayService } from './modules/notifications/outbox-relay.service';
 import { ReportsController } from './modules/reports/reports.controller';
 import { ReportsService } from './modules/reports/reports.service';
 import { InspectionController } from './modules/inspections/inspection.controller';
@@ -36,6 +41,7 @@ export class AppModule {
         SyncController,
         DocumentsController,
         ReportsController,
+        NotificationsController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -50,6 +56,11 @@ export class AppModule {
         { provide: PDF_RENDERER, useValue: createPdfRenderer(config) },
         DocumentsService,
         ReportsService,
+        { provide: EMAIL_SENDER, useValue: createEmailSender(config) },
+        { provide: SMS_SENDER, useValue: createSmsSender(config) },
+        NotificationsService,
+        OutboxRelayService,
+        JobsService,
         { provide: APP_GUARD, useClass: AuthGuard },
         { provide: APP_FILTER, useClass: ProblemFilter },
       ],

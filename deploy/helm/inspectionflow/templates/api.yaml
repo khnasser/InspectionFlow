@@ -39,10 +39,10 @@ spec:
             - { name: http, containerPort: 3000 }
           env:
             {{- include "if.env" $root | nindent 12 }}
-            - name: REPORT_WORKER
+            - name: BACKGROUND_JOBS
               value: {{ ternary "on" "off" (eq $component "worker") | quote }}
             {{- if eq $component "worker" }}
-            - name: REPORT_WORKER_INTERVAL_MS
+            - name: JOBS_INTERVAL_MS
               value: {{ $root.Values.worker.intervalMs | quote }}
             {{- end }}
           envFrom:

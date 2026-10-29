@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import { createHash } from 'crypto';
 import QRCode from 'qrcode';
 import { uuidv7 } from '@inspectionflow/engine';
@@ -15,9 +15,8 @@ export { newVerificationCode, queueInspectionReport } from './report-queue';
 const EMBEDDABLE = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_PHOTOS = 24;
 @Injectable()
-export class ReportsService implements OnModuleInit, OnModuleDestroy {
+export class ReportsService implements OnModuleDestroy {
   private readonly log = new Logger('ReportWorker');
-  private timer: NodeJS.Timeout | null = null;
   private running = false;
 
   constructor(
@@ -30,15 +29,7 @@ export class ReportsService implements OnModuleInit, OnModuleDestroy {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
-  onModuleInit() {
-    if (this.config.reports.worker) {
-      this.timer = setInterval(() => void this.runOnce().catch((e) => this.log.error(e)), this.config.reports.workerIntervalMs);
-      this.timer.unref();
-    }
-  }
-
   async onModuleDestroy() {
-    if (this.timer) clearInterval(this.timer);
     await this.renderer.close?.();
   }
 
