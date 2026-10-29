@@ -161,8 +161,8 @@ describe('PRD multiplier formula, party strategy and yearly reset', () => {
 describe('inspection-level rules', () => {
   const rules = { OC: overcrowding, 'FS-01': fireExit };
   const thresholds = [
-    { minAmount: 0, maxAmount: 50000, approvalChain: ['SECTION_MANAGER', 'DIRECTOR'] },
-    { minAmount: 50000.01, maxAmount: null, approvalChain: ['SECTION_MANAGER', 'DIRECTOR', 'CEO'] },
+    { minAmount: 0, maxAmount: 50000, approvalChain: ['SECTION_MANAGER', 'COMMITTEE'] },
+    { minAmount: 50000.01, maxAmount: null, approvalChain: ['SECTION_MANAGER', 'COMMITTEE', 'CEO'] },
   ];
 
   it('no findings -> NO_FINDINGS, no review', () => {
@@ -185,12 +185,14 @@ describe('inspection-level rules', () => {
     expect(r.totalFine).toBe(1000);
     expect(r.followUpDate).toBe('2027-03-15');
     expect(r.review).toBe('MANAGER');
-    expect(r.approvalChain).toEqual(['SECTION_MANAGER', 'DIRECTOR']);
+    expect(r.approvalChain).toEqual(['SECTION_MANAGER']);
   });
 
-  it('above AED 50,000 routes to the CEO', () => {
-    expect(approvalChainFor('COMMITTEE', 60000, thresholds)).toEqual(['SECTION_MANAGER', 'DIRECTOR', 'CEO']);
-    expect(approvalChainFor('MANAGER', 100, [])).toEqual(['SECTION_MANAGER']);
+  it('committee reviews follow amount thresholds; above AED 50,000 adds the CEO', () => {
+    expect(approvalChainFor('COMMITTEE', 60000, thresholds)).toEqual(['SECTION_MANAGER', 'COMMITTEE', 'CEO']);
+    expect(approvalChainFor('COMMITTEE', 10000, thresholds)).toEqual(['SECTION_MANAGER', 'COMMITTEE']);
+    expect(approvalChainFor('COMMITTEE', 10000, [])).toEqual(['SECTION_MANAGER', 'COMMITTEE']);
+    expect(approvalChainFor('MANAGER', 100, thresholds)).toEqual(['SECTION_MANAGER']);
   });
 
   it('rejects a violation code repeated in one inspection', () => {

@@ -209,18 +209,22 @@ export function categoryFor(findings: FindingResult[]): InspectionCategory {
   return 'MINOR';
 }
 
-/** Approval chain by total fine; falls back to defaults per review level. */
+/**
+ * Approval chain. Manager-level reviews go to the section manager only;
+ * committee-level reviews follow the tenant's amount thresholds (for example
+ * above AED 50,000 the CEO is added), with a default committee chain.
+ */
 export function approvalChainFor(
   review: ReviewLevel,
   totalFine: number,
   thresholds: ApprovalThreshold[],
 ): string[] {
   if (review === 'NONE') return [];
+  if (review === 'MANAGER') return ['SECTION_MANAGER'];
   const match = thresholds.find(
     (t) => totalFine >= t.minAmount && (t.maxAmount === null || totalFine <= t.maxAmount),
   );
-  if (match) return match.approvalChain;
-  return review === 'COMMITTEE' ? ['SECTION_MANAGER', 'COMMITTEE'] : ['SECTION_MANAGER'];
+  return match ? match.approvalChain : ['SECTION_MANAGER', 'COMMITTEE'];
 }
 
 export interface InspectionEvaluationInput {
