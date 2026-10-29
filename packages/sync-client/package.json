@@ -1,0 +1,15 @@
+{
+  "name": "@inspectionflow/sync-client",
+  "version": "0.1.0",
+  "description": "Offline outbox, sync and provisional evaluation for the InspectionFlow mobile app",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@inspectionflow/engine": "0.1.0"
+  }
+}

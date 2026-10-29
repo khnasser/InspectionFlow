@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "InspectionFlow",
+    "slug": "inspectionflow",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": true, "bundleIdentifier": "ae.inspectionflow.mobile" },
+    "android": { "package": "ae.inspectionflow.mobile" },
+    "extra": { "supportsRTL": true, "forcesRTL": true },
+    "plugins": [
+      ["expo-sqlite", { "useSQLCipher": true }],
+      "expo-secure-store"
+    ]
+  }
+}

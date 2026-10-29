@@ -1,0 +1,31 @@
+{
+  "name": "@inspectionflow/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@inspectionflow/engine": "file:../../packages/engine",
+    "@inspectionflow/sync-client": "file:../../packages/sync-client",
+    "@react-native-community/netinfo": "11.4.1",
+    "expo": "~52.0.0",
+    "expo-asset": "~11.0.0",
+    "expo-crypto": "~14.0.0",
+    "expo-secure-store": "~14.0.0",
+    "expo-sqlite": "~15.0.0",
+    "expo-status-bar": "~2.0.0",
+    "react": "18.3.1",
+    "react-native": "~0.76.3",
+    "react-native-svg": "15.8.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~18.3.12",
+    "typescript": "~5.3.3"
+  }
+}
