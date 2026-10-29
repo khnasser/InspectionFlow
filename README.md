@@ -2,7 +2,7 @@
 
 Arabic-first, multi-tenant inspection and enforcement platform for GCC regulators: inspect offline on a phone, turn findings into occurrence-based actions and fines with the regulator's own rules, route them for approval, issue a payment advice and track collection, with every action in a tamper-evident audit log.
 
-This MVP implements Phase 0 of the *InspectionFlow — Technical Implementation Blueprint*: tenancy with PostgreSQL row-level security, the violation engine, the inspection lifecycle, approvals, payments, tasks and delegation, offline sync, and a back-office web app and a mobile app. It is built in TypeScript end to end so the engine runs identically on the server and on the device.
+This MVP implements Phase 0 of the *InspectionFlow — Technical Implementation Blueprint*: tenancy with PostgreSQL row-level security, the violation engine, the inspection lifecycle, approvals, payments, tasks and delegation, offline sync, and a back-office web app and a mobile app. It is built in TypeScript end to end so the engine runs identically on the server and on the device; see `docs/ADR-001-typescript-stack.md` for the decision and its consequences.
 
 ## Repository layout
 
@@ -14,7 +14,7 @@ This MVP implements Phase 0 of the *InspectionFlow — Technical Implementation 
 | `apps/web` | React + Ant Design back office, Arabic RTL and English |
 | `apps/mobile` | Expo (React Native) inspector app: encrypted SQLite, works fully offline |
 | `db/migrations` | `001_core_schema.sql` (schema v2 with the 20 blueprint fixes) and `002_mvp_support.sql` |
-| `docs/` | MVP scope and traceability, API reference |
+| `docs/` | MVP scope and traceability, API reference, architecture decision records |
 | `deploy/`, `docker-compose.yml` | Container images and a local stack |
 
 ## Quick start (local)
