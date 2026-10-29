@@ -232,14 +232,17 @@ describe('notification delivery', () => {
         completedAt: new Date().toISOString(), findings: [{ id: uuidv7(), violationCode: 'CS-01' }],
       })
       .expect(201);
+    // The follow-up task may be routed to a delegate (another suite sets one up): use whoever got it.
+    const task = (await db.query(`SELECT t.assignee_id, u.email FROM tasks t JOIN users u ON u.id = t.assignee_id WHERE t.log_id = $1`, [res.body.logId])).rows[0];
     await db.query(`UPDATE tasks SET status = 'CANCELLED' WHERE log_id = $1`, [res.body.logId]);
+    tokens.assignee = (await request(http).post('/v1/dev/login').send({ tenantCode: 'DEMO-AUTH', email: task.email }).expect(201)).body.accessToken;
     await runJobs();
-    const inbox = (await api('ahmed').get('/v1/me/notifications').expect(200)).body;
+    const inbox = (await api('assignee').get('/v1/me/notifications').expect(200)).body;
     const n = inbox.find((x: any) => x.template_code === 'TASK_ASSIGNED' && x.payload.siteName === 'Inbox test site');
     expect(n).toMatchObject({ status: 'SENT' });
     await api('sara').post(`/v1/me/notifications/${n.id}/read`).expect(404); // not hers
-    await api('ahmed').post(`/v1/me/notifications/${n.id}/read`).expect(200);
-    expect((await api('ahmed').get('/v1/me/notifications').expect(200)).body.find((x: any) => x.id === n.id).status).toBe('READ');
+    await api('assignee').post(`/v1/me/notifications/${n.id}/read`).expect(200);
+    expect((await api('assignee').get('/v1/me/notifications').expect(200)).body.find((x: any) => x.id === n.id).status).toBe('READ');
   });
 });
 

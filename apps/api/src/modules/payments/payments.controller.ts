@@ -137,6 +137,20 @@ export class PaymentsController {
         newValue: { amount: d.amount, gateway: d.gateway, txn: d.gatewayTxnId, status: newStatus },
       });
       await emitEvent(tx, 'PAYMENT_ADVICE', pa.id, 'payment.captured', { amount: d.amount, status: newStatus });
+      if (newStatus === 'PAID') {
+        // Lift an overdue block once nothing else is overdue for the party.
+        const lifted = await tx.query(
+          `UPDATE parties p SET blocked_status = 'NONE'
+            WHERE p.id = (SELECT party_id FROM payment_advices WHERE id = $1) AND p.blocked_status = 'FINANCE_BLOCK'
+              AND NOT EXISTS (SELECT 1 FROM payment_advices x WHERE x.party_id = p.id AND x.status = 'OVERDUE')
+           RETURNING p.id`,
+          [pa.id],
+        );
+        if (lifted.length) {
+          await this.audit.record(tx, { action: 'party.unblocked', entityType: 'PARTY', entityId: lifted[0].id, actorType: 'INTEGRATION' });
+          await emitEvent(tx, 'PARTY', lifted[0].id, 'party.unblocked', { reason: 'PAID', paymentAdviceId: pa.id });
+        }
+      }
       if (pa.log_id) await this.inspections.refreshLogStatus(tx, pa.log_id, null);
       return { status: newStatus };
     });

@@ -41,6 +41,38 @@ export const DEFAULT_TEMPLATES: Record<string, Partial<Record<Channel, Bilingual
       en: { body: 'Payment advice {{number}}: AED {{amount}} due by {{dueDate}}. Pay: {{payUrl}}' },
     },
   },
+  PAYMENT_REMINDER: {
+    EMAIL: {
+      ar: { subject: 'تذكير: إشعار الدفع {{number}}', body: 'السادة {{partyName}}،\n\nنذكركم بأن إشعار الدفع رقم {{number}} بمبلغ {{amount}} درهم يستحق قبل {{dueDate}}.\nللدفع: {{payUrl}}\n\n{{issuer}}' },
+      en: { subject: 'Reminder: payment advice {{number}}', body: 'Dear {{partyName}},\n\nA reminder that payment advice {{number}} for AED {{amount}} is due by {{dueDate}}.\nPay online: {{payUrl}}\n\n{{issuer}}' },
+    },
+    SMS: {
+      ar: { body: 'تذكير: إشعار الدفع {{number}} بمبلغ {{amount}} درهم يستحق قبل {{dueDate}}. للدفع: {{payUrl}}' },
+      en: { body: 'Reminder: payment advice {{number}}, AED {{amount}}, due {{dueDate}}. Pay: {{payUrl}}' },
+    },
+  },
+  PAYMENT_OVERDUE: {
+    EMAIL: {
+      ar: { subject: 'متأخر السداد: إشعار الدفع {{number}}', body: 'السادة {{partyName}}،\n\nلم يتم سداد إشعار الدفع رقم {{number}} بمبلغ {{amount}} درهم في موعده ({{dueDate}}). قد يؤدي ذلك إلى إيقاف الخدمات المرتبطة بالترخيص حتى السداد.\nللدفع: {{payUrl}}\n\n{{issuer}}' },
+      en: { subject: 'Overdue: payment advice {{number}}', body: 'Dear {{partyName}},\n\nPayment advice {{number}} for AED {{amount}} was due on {{dueDate}} and is unpaid. Licence-related services may be blocked until it is paid.\nPay online: {{payUrl}}\n\n{{issuer}}' },
+    },
+    SMS: {
+      ar: { body: 'إشعار الدفع {{number}} ({{amount}} درهم) متأخر السداد منذ {{dueDate}}. للدفع: {{payUrl}}' },
+      en: { body: 'Payment advice {{number}} (AED {{amount}}) is overdue since {{dueDate}}. Pay: {{payUrl}}' },
+    },
+  },
+  TASK_ESCALATED: {
+    IN_APP: {
+      ar: { subject: 'مهمة متأخرة', body: 'مهمة {{taskType}} — {{siteName}} المسندة إلى {{assignee}} متأخرة منذ {{dueDate}}.' },
+      en: { subject: 'Overdue task', body: '{{taskType}} task — {{siteName}}, assigned to {{assignee}}, is overdue since {{dueDate}}.' },
+    },
+  },
+  FINDING_DUE: {
+    IN_APP: {
+      ar: { subject: 'موعد تصحيح مخالفة', body: 'حان موعد التحقق من تصحيح المخالفة {{code}} في {{siteName}} ({{logNumber}}).' },
+      en: { subject: 'Finding due', body: 'Finding {{code}} at {{siteName}} ({{logNumber}}) is due for a close-out check.' },
+    },
+  },
   TASK_ASSIGNED: {
     IN_APP: {
       ar: { subject: 'مهمة جديدة', body: 'أسندت إليك مهمة {{taskType}} — {{siteName}}، تستحق في {{dueDate}}.' },

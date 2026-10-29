@@ -33,3 +33,4 @@ Status: **Done** = implemented and covered by automated tests; **Partial** = imp
 | Configuration Studio | Next | Configuration seeded by `apps/api/scripts/seed.ts` |
 | Client portal | Next | Blueprint §6.12 |
 | Deployment: containers, Kubernetes, migrations | Done (as code), Partial (no cluster yet) | `deploy/helm/inspectionflow`, `docs/DEPLOY.md`; images built and pushed by CI; chart validated with kubeconform |
+| Scheduler: payment reminders, overdue and blocking, task escalation, finding due dates (PRD 3.10, construction-safety rules) | Done | `SchedulerService`: reminders on configurable days (default 3 and 6), overdue marking with audit and `payment_advice.overdue`, optional party FINANCE_BLOCK lifted on payment, escalation of tasks overdue by N days to the assignee's manager, finding due notices; each action fires once; rules per tenant in `tenant_settings.scheduler` |

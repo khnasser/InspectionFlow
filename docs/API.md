@@ -57,3 +57,10 @@ All routes except `/health`, `/v1/auth/config`, `/v1/dev/login`, `/v1/webhooks/p
 ### Webhook format
 
 `POST` to the subscriber with JSON `{id, type, occurredAt, tenantId, subject: {type, id}, data}` and headers `X-InspectionFlow-Event`, `X-InspectionFlow-Delivery` (the event id: ignore repeats) and `X-InspectionFlow-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256 of "t.body" with the subscription secret>`. Any 2xx is success; anything else is retried with exponential backoff (up to 8 attempts, at most 6 hours apart). Only https URLs that resolve to public addresses are accepted.
+
+### Tenant settings used by the background jobs
+
+| Key (`tenant_settings`) | Default | Effect |
+| --- | --- | --- |
+| `notifications.quietHours` | `{"start":"22:00","end":"07:00"}` | No SMS inside this window (tenant time zone); `null` turns it off |
+| `scheduler` | `{"paymentReminderDays":[3,6],"blockOnOverdue":true,"taskEscalationDays":3,"findingDueReminder":true}` | Reminder days after issue, FINANCE_BLOCK on overdue (lifted when paid), escalation delay, finding due notices |

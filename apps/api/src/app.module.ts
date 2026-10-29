@@ -15,6 +15,7 @@ import { JobsService } from './modules/notifications/jobs.service';
 import { NotificationsController } from './modules/notifications/notifications.controller';
 import { NotificationsService } from './modules/notifications/notifications.service';
 import { OutboxRelayService } from './modules/notifications/outbox-relay.service';
+import { SchedulerService } from './modules/notifications/scheduler.service';
 import { ReportsController } from './modules/reports/reports.controller';
 import { ReportsService } from './modules/reports/reports.service';
 import { InspectionController } from './modules/inspections/inspection.controller';
@@ -60,6 +61,7 @@ export class AppModule {
         { provide: SMS_SENDER, useValue: createSmsSender(config) },
         NotificationsService,
         OutboxRelayService,
+        SchedulerService,
         JobsService,
         { provide: APP_GUARD, useClass: AuthGuard },
         { provide: APP_FILTER, useClass: ProblemFilter },
