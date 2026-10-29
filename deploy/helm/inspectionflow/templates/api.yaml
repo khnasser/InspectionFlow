@@ -1,0 +1,105 @@
+{{- $root := . -}}
+{{- range $component := list "api" "worker" }}
+{{- $spec := index $root.Values $component }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $root.Release.Name }}-{{ $component }}
+  labels: {{- include "if.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  {{- if not (and (eq $component "api") $root.Values.api.autoscaling.enabled) }}
+  replicas: {{ $spec.replicas }}
+  {{- end }}
+  selector:
+    matchLabels: {{- include "if.selector" $root | nindent 6 }}
+      app.kubernetes.io/component: {{ $component }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: {{- include "if.selector" $root | nindent 8 }}
+        app.kubernetes.io/component: {{ $component }}
+      annotations:
+        checksum/config: {{ toJson $root.Values.config | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "if.serviceAccount" $root }}
+      securityContext: {{- toYaml $root.Values.podSecurityContext | nindent 8 }}
+      {{- with $root.Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: {{ $component }}
+          image: {{ include "if.apiImage" $root }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          ports:
+            - { name: http, containerPort: 3000 }
+          env:
+            {{- include "if.env" $root | nindent 12 }}
+            - name: REPORT_WORKER
+              value: {{ ternary "on" "off" (eq $component "worker") | quote }}
+            {{- if eq $component "worker" }}
+            - name: REPORT_WORKER_INTERVAL_MS
+              value: {{ $root.Values.worker.intervalMs | quote }}
+            {{- end }}
+          envFrom:
+            - secretRef: { name: {{ include "if.secretName" $root }} }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 6
+          resources: {{- toYaml $spec.resources | nindent 12 }}
+          securityContext: {{- include "if.containerSecurity" $root | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: {{- include "if.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "if.selector" . | nindent 4 }}
+    app.kubernetes.io/component: api
+  ports:
+    - { name: http, port: 3000, targetPort: http }
+{{- if .Values.api.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: {{- include "if.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: {{ .Release.Name }}-api }
+  minReplicas: {{ .Values.api.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.api.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: {{ .Values.api.autoscaling.targetCPUUtilizationPercentage }} }
+{{- end }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ .Release.Name }}-api
+  labels: {{- include "if.labels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {{- include "if.selector" . | nindent 6 }}
+      app.kubernetes.io/component: api

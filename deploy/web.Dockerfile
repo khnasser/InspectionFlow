@@ -9,6 +9,7 @@ COPY packages/sync-client/package.json packages/sync-client/package.json
 RUN npm ci --workspaces --include-workspace-root && npm run build -w @inspectionflow/web
 
 FROM nginx:1.27-alpine
-COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+ENV API_UPSTREAM=http://api:3000
+COPY deploy/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 8080

@@ -1,0 +1,52 @@
+{{- if .Values.gotenberg.enabled }}
+# HTML -> PDF. Reports inline fonts and photos, so it needs no internet access
+# (the network policy denies all egress).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-gotenberg
+  labels: {{- include "if.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gotenberg
+spec:
+  replicas: {{ .Values.gotenberg.replicas }}
+  selector:
+    matchLabels: {{- include "if.selector" . | nindent 6 }}
+      app.kubernetes.io/component: gotenberg
+  template:
+    metadata:
+      labels: {{- include "if.selector" . | nindent 8 }}
+        app.kubernetes.io/component: gotenberg
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: gotenberg
+          image: {{ .Values.gotenberg.image }}
+          args: ["gotenberg", "--api-timeout=60s", "--libreoffice-disable-routes"]
+          ports:
+            - { name: http, containerPort: 3000 }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          resources: {{- toYaml .Values.gotenberg.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-gotenberg
+  labels: {{- include "if.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "if.selector" . | nindent 4 }}
+    app.kubernetes.io/component: gotenberg
+  ports:
+    - { name: http, port: 3000, targetPort: http }
+{{- end }}

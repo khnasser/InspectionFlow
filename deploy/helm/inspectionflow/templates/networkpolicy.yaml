@@ -1,0 +1,21 @@
+{{- if .Values.networkPolicy.enabled }}
+# Gotenberg: reachable only from the API and worker pods, no egress at all.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-gotenberg
+  labels: {{- include "if.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- include "if.selector" . | nindent 6 }}
+      app.kubernetes.io/component: gotenberg
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app.kubernetes.io/component, operator: In, values: [api, worker] }
+      ports:
+        - { port: 3000 }
+  egress: []
+{{- end }}

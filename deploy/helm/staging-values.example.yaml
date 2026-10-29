@@ -1,0 +1,16 @@
+# Example values for a staging environment. Copy, fill in, and keep real
+# secrets out of git (use secrets.existingSecret with External Secrets or Sealed Secrets).
+host: staging.inspect.example.ae
+image:
+  api: { tag: main }
+  web: { tag: main }
+config:
+  OIDC_ISSUER: https://id.staging.example.ae/realms/inspectionflow-demo
+  S3_BUCKET: inspectionflow-staging-evidence
+  S3_REGION: me-central-1
+secrets:
+  existingSecret: inspectionflow-staging
+serviceAccount:
+  annotations: {}
+api:
+  autoscaling: { minReplicas: 1, maxReplicas: 3 }

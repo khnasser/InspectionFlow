@@ -1,0 +1,97 @@
+# InspectionFlow — Kubernetes values. Cloud-neutral: works on EKS, AKS, GKE,
+# OpenShift or an on-premises cluster. PostgreSQL, object storage and Keycloak
+# are expected as managed services (or separate releases) and are referenced here.
+
+image:
+  api:
+    repository: ghcr.io/khnasser/inspectionflow-api
+    tag: ""            # defaults to the chart appVersion
+  web:
+    repository: ghcr.io/khnasser/inspectionflow-web
+    tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# Public host names (TLS terminated at the ingress).
+host: inspect.example.ae
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  tlsSecretName: inspectionflow-tls
+
+# Non-secret settings, passed to the API and worker as environment variables.
+config:
+  AUTH_MODE: oidc
+  OIDC_ISSUER: https://id.example.ae/realms/inspectionflow
+  OIDC_AUDIENCE: inspectionflow-api
+  OIDC_JWKS_URL: ""            # set when Keycloak is reached on an internal URL
+  TENANT_CLAIM: tenant
+  OIDC_WEB_CLIENT_ID: inspectionflow-web
+  OIDC_MOBILE_CLIENT_ID: inspectionflow-mobile
+  STORAGE_DRIVER: s3
+  S3_BUCKET: inspectionflow-evidence
+  S3_REGION: me-central-1
+  S3_ENDPOINT: ""              # set for MinIO or another S3-compatible store
+  S3_FORCE_PATH_STYLE: "false"
+  REPORT_RENDERER: gotenberg
+  MAX_UPLOAD_BYTES: "26214400"
+  CORS_ORIGIN: ""              # defaults to https://<host>
+
+# Secret settings. Either name an existing Secret (recommended: synced from a
+# vault by External Secrets) or let the chart create one from `secrets.values`.
+# Keys: DATABASE_URL (inspectionflow_api login), DATABASE_ADMIN_URL (owner, for
+# migrations), PAYMENT_WEBHOOK_SECRET, STORAGE_SIGNING_SECRET, and for S3 static
+# keys AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (omit when using workload identity).
+secrets:
+  existingSecret: ""
+  values: {}
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}    # e.g. eks.amazonaws.com/role-arn for S3 access without keys
+
+api:
+  replicas: 2
+  resources:
+    requests: { cpu: 250m, memory: 384Mi }
+    limits: { memory: 768Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+
+# Report worker: same image, renders issued PDFs (REPORT_WORKER=on); the API
+# pods run with the worker off so rendering never competes with requests.
+worker:
+  replicas: 1
+  intervalMs: 5000
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+web:
+  replicas: 2
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { memory: 128Mi }
+
+gotenberg:
+  enabled: true
+  image: gotenberg/gotenberg:8
+  replicas: 1
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { memory: 1Gi }
+
+migrations:
+  enabled: true      # runs db/migrations before each install / upgrade
+
+networkPolicy:
+  enabled: true
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile: { type: RuntimeDefault }
