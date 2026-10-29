@@ -18,11 +18,12 @@ Status: **Done** = implemented and covered by automated tests; **Partial** = imp
 | User delegation, auto-resolve at assignment (PRD 3.7) | Done | `AssignmentService.resolveAssignee`, exclusion constraint against overlaps |
 | Team manager dashboard, bulk reassignment (PRD 3.8) | Done | `GET /v1/team/dashboard`, `POST /v1/tasks/bulk-reassign` |
 | Digital signature, clear by senior with reason, edit lock (PRD 3.9) | Done | `client_signatures`, `POST /v1/inspections/:id/signature/clear`; signature pad in mobile app |
+| Sign-in: Keycloak, UAE PASS (PRD 7) | Partial | API OIDC verification and user linking done and tested (`oidc.e2e.spec.ts`); web (`oidc-client-ts`) and mobile (`expo-auth-session`) PKCE flows; realm export with UAE PASS staging broker. Not yet run against a live Keycloak / UAE PASS |
 | UAE PASS signing | Next | Blueprint §8 |
 | Billing: payment advice per inspection, statuses (PRD 3.10) | Done | `InspectionService.finalizeApproved`, `payment_advices` |
 | Payment gateways PayTabs / Checkout.com / Network International / Stripe | Partial | Signed, idempotent webhook contract done (`POST /v1/webhooks/payments`); real adapters Next |
-| Document storage MinIO/S3 (PRD 3.11) | Next | Schema ready (`documents`, `document_versions`) |
-| Arabic PDF / Excel reports (PRD 3.12) | Partial | Bilingual HTML report done (`/report.html`); PDF rendering worker Next |
+| Document storage MinIO/S3, photo evidence (PRD 3.11) | Done (local driver), Partial (S3) | `common/storage.ts` (S3 presigned PUT with SHA-256 checksum; local driver with signed URLs), `modules/documents`; offline photo queue in `sync-client`; camera capture in mobile; thumbnails in web; tests in `evidence-reports.e2e.spec.ts`. S3 driver not yet run against a real bucket |
+| Arabic PDF reports with QR verification (PRD 3.12) | Done (Chromium via Playwright), Partial (Gotenberg) | Report queued on approval, rendered by a worker with embedded Noto Naskh Arabic and photos, stored with SHA-256; `GET /v1/inspections/:id/report.pdf`, public `GET /verify/:code`. Excel exports Next |
 | CRM sync HubSpot / Salesforce / Zoho (PRD 8) | Partial | Transactional outbox events written; connectors Next |
 | Notifications SMS / email | Partial | `notifications` rows queued; delivery worker Next |
 | Audit of all actions (PRD 11) | Done | Hash-chained, append-only `audit_logs`; verify endpoint; tamper test |

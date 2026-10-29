@@ -1,17 +1,27 @@
 # API reference (MVP)
 
-All routes except `/health`, `/v1/dev/login` and `/v1/webhooks/payments` need `Authorization: Bearer <token>`. The tenant always comes from the token. Errors are `application/problem+json`.
+All routes except `/health`, `/v1/auth/config`, `/v1/dev/login`, `/v1/webhooks/payments`, `/v1/storage/local/*` and the verification routes need `Authorization: Bearer <token>`. The tenant always comes from the token. Errors are `application/problem+json`.
 
 | Method | Path | Roles | Purpose |
 | --- | --- | --- | --- |
 | GET | `/health` | public | Liveness and database check |
+| GET | `/v1/auth/config` | public | How to sign in: `{mode:'dev'}` or `{mode:'oidc', issuer, webClientId, mobileClientId, scope}` |
 | POST | `/v1/dev/login` | public, `AUTH_MODE=dev` only | `{tenantCode, email}` → `{accessToken, user}` |
 | GET | `/v1/me` | any | Caller identity |
 | GET | `/v1/config/bundle` | any | Processes, violations with engine rules, checklists, thresholds (offline bundle) |
 | POST | `/v1/engine/evaluate` | any | Side-effect-free evaluation `{processCode, inspectableId, findings[]}` |
 | POST | `/v1/inspections/submit` | INSPECTOR, SENIOR_INSPECTOR | Submit an inspection; idempotent on `clientMutationId` |
-| GET | `/v1/inspections/:id` | any | Detail with findings, approvals, signature |
-| GET | `/v1/inspections/:id/report.html?lang=ar|en` | any | Bilingual report (PDF source) |
+| GET | `/v1/inspections/:id` | any | Detail with findings, approvals, signature and `evidence[]` (with 5-minute download URLs) |
+| GET | `/v1/inspections/:id/report.html?lang=ar|en` | any | Report as HTML |
+| GET | `/v1/inspections/:id/report.pdf?lang=ar|en&preview=1` | any | The issued PDF once approved (`X-Report-Issued: true`); otherwise, or with `preview=1`, a PDF marked as a preview |
+| GET | `/v1/inspections/:id/reports` | any | Issued reports: number, status, verification code and URL, SHA-256 |
+| POST | `/v1/documents` | INSPECTOR, SENIOR_INSPECTOR | Start an evidence upload `{id, ownerType: FINDING|INSPECTION, ownerId, mimeType, sizeBytes, sha256, fileName?, capturedAt?, latitude?, longitude?}` → `{status, upload: {url, method: 'PUT', headers}}`. The device picks `id` and `ownerId`, so photos can be sent before or after the inspection. Idempotent on `id` |
+| PUT | upload URL | signed URL | Send the bytes with the returned headers; size and SHA-256 must match |
+| POST | `/v1/documents/:id/complete` | the uploader | Check the stored object and mark it `AVAILABLE` (or `REJECTED`) |
+| GET | `/v1/documents/:id` | any | Metadata and a short-lived download URL |
+| POST | `/v1/admin/reports/run` | ADMIN | Run the report worker now (it also runs on a timer) |
+| GET | `/v1/verify/:code` | public | `{valid, status, issuer, documentType, reportNumber, issuedAt, pdfSha256, inspectionStatus}` — no personal data |
+| GET | `/verify/:code` | public | Bilingual page the QR code opens |
 | POST | `/v1/inspections/:id/respond` | inspector who performed it | Answer a "more info" request |
 | POST | `/v1/inspections/:id/signature/clear` | SENIOR_INSPECTOR, SECTION_MANAGER, ADMIN | Clear signature with reason; unlocks editing |
 | GET | `/v1/reviews` | reviewer roles | Approval steps the caller can act on now |
