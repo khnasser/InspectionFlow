@@ -10,6 +10,7 @@ import {
   respondSchema,
   submitInspectionSchema,
 } from './inspection.schemas';
+import { DocumentsService } from '../documents/documents.service';
 import { InspectionService } from './inspection.service';
 import { renderInspectionReport } from './report';
 import { ReviewService } from './review.service';
@@ -24,6 +25,7 @@ export class InspectionController {
     private readonly inspections: InspectionService,
     private readonly reviews: ReviewService,
     private readonly audit: AuditService,
+    private readonly documents: DocumentsService,
   ) {}
 
   @Post('engine/evaluate')
@@ -41,7 +43,11 @@ export class InspectionController {
 
   @Get('inspections/:id')
   detail(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
-    return this.db.withTenant(user.tenantId, user.userId, (tx) => this.inspections.detail(tx, id));
+    return this.db.withTenant(user.tenantId, user.userId, async (tx) => {
+      const d = await this.inspections.detail(tx, id);
+      const evidence = await this.documents.forInspection(tx, id, d.findings.map((f: { id: string }) => f.id));
+      return { ...d, evidence };
+    });
   }
 
   @Get('inspections/:id/report.html')

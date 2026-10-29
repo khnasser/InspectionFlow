@@ -11,6 +11,6 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    proxy: { '/v1': 'http://localhost:3000', '/health': 'http://localhost:3000' },
+    proxy: { '/v1': 'http://localhost:3000', '/verify': 'http://localhost:3000', '/health': 'http://localhost:3000' },
   },
 });

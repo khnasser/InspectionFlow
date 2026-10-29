@@ -87,4 +87,11 @@ export const api = {
     const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
     window.open(url, '_blank', 'noopener');
   },
+  /** Opens an authenticated PDF in a new tab. */
+  async openPdf(path: string) {
+    const res = await fetch(`${BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) throw new ApiError(res.status, await res.text(), null);
+    const url = URL.createObjectURL(await res.blob());
+    window.open(url, '_blank', 'noopener');
+  },
 };

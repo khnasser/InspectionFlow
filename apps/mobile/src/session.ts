@@ -2,7 +2,8 @@ import * as AuthSession from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import { SyncClient, SyncTransport } from '@inspectionflow/sync-client';
+import { HttpError, SyncClient, SyncTransport } from '@inspectionflow/sync-client';
+import { putFile } from './evidence';
 import { uuidv7 } from '@inspectionflow/engine';
 import { SqliteStore } from './storage';
 
@@ -122,10 +123,18 @@ function transport(s: Session): SyncTransport {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.token}` },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`${res.status}`);
+    if (!res.ok) throw new HttpError(res.status, await res.text().catch(() => ''));
     return res.json();
   };
   return {
+    uploads: {
+      initiate: (meta) => call('POST', '/v1/documents', meta),
+      put: async (target, localUri) => {
+        const status = await putFile(target, localUri);
+        if (status < 200 || status >= 300) throw new HttpError(status, 'upload refused');
+      },
+      complete: (id) => call('POST', `/v1/documents/${id}/complete`),
+    },
     push: (batch) => call('POST', '/v1/sync/push', batch),
     pull: () => call('GET', '/v1/sync/pull'),
     bundle: () => call('GET', '/v1/config/bundle'),

@@ -1,4 +1,4 @@
-# Local stack: PostgreSQL + API + web. Development settings only.
+# Local stack: PostgreSQL + API + web + Gotenberg (PDF) + Keycloak. Development settings only.
 services:
   db:
     image: postgres:16
@@ -28,12 +28,27 @@ services:
       db: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
     environment:
+      # The image defaults to production, which refuses dev sign-in and local storage.
+      NODE_ENV: development
       DATABASE_URL: postgres://inspectionflow_api:inspectionflow_api@db:5432/inspectionflow
       AUTH_MODE: dev
       JWT_DEV_SECRET: change-me-dev-secret-at-least-32-characters
       PAYMENT_WEBHOOK_SECRET: change-me-webhook-secret
       PUBLIC_BASE_URL: http://localhost:8080
+      VERIFY_BASE_URL: http://localhost:8080
+      # Evidence on a local volume here; production uses STORAGE_DRIVER=s3 (bucket with SSE-KMS).
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_DIR: /data/storage
+      STORAGE_SIGNING_SECRET: change-me-storage-signing-secret-32ch
+      REPORT_RENDERER: gotenberg
+      GOTENBERG_URL: http://gotenberg:3000
+    volumes: ['storage:/data/storage']
     ports: ['3000:3000']
+
+  # HTML -> PDF (headless Chromium). Reports inline fonts and photos, so it needs no internet.
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    command: ['gotenberg', '--api-timeout=60s']
 
   web:
     build: { context: ., dockerfile: deploy/web.Dockerfile }
@@ -55,3 +70,4 @@ services:
 
 volumes:
   dbdata:
+  storage:

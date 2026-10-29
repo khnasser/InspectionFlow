@@ -22,6 +22,7 @@ import { AuthUser } from '../../common/auth';
 import { TenantTx } from '../../common/db.service';
 import { emitEvent, queueNotification } from '../../common/outbox';
 import { ConfigService, ProcessRow } from '../config/config.service';
+import { queueInspectionReport } from '../reports/report-queue';
 import { AssignmentService } from '../tasks/assignment.service';
 import { SubmitInspection } from './inspection.schemas';
 
@@ -544,6 +545,8 @@ export class InspectionService {
       newValue: { totalFine: total, paymentAdviceId: paId },
     });
     await emitEvent(tx, 'INSPECTION', inspectionId, 'inspection.closed', { category: insp.category, totalFine: total });
+    // The signed PDF with its QR verification code is produced by the report worker.
+    await queueInspectionReport(tx, inspectionId);
   }
 
   private async billingParty(

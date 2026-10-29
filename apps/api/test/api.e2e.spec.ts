@@ -68,6 +68,8 @@ beforeAll(async () => {
     AUTH_MODE: 'dev',
     PAYMENT_WEBHOOK_SECRET: WEBHOOK_SECRET,
     NODE_ENV: 'test',
+    REPORT_WORKER: 'off',
+    STORAGE_LOCAL_DIR: join(tmpdir(), 'inspectionflow-test-storage'),
   });
   app = await NestFactory.create(AppModule.register(config), { logger: false });
   await app.init();

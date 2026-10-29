@@ -40,6 +40,8 @@ export interface FindingDraft {
 }
 
 export interface InspectionDraft {
+  /** Optional pre-generated id, so photos can be attached before the inspection is queued. */
+  id?: string;
   processCode: string;
   inspectableId: string;
   kind: 'SCHEDULED' | 'RANDOM' | 'FOLLOW_UP' | 'MANAGEMENT_ORDER' | 'COMPLAINT' | 'SERVICE';
@@ -72,8 +74,54 @@ export interface PushResult {
   error?: { status: number; message: unknown };
 }
 
+/** A photo or file waiting to be uploaded; bytes stay on the device until confirmed. */
+export interface AttachmentDraft {
+  id: string;
+  ownerType: 'FINDING' | 'INSPECTION';
+  ownerId: string;
+  /** Device file reference (file:// URI); the transport knows how to read it. */
+  localUri: string;
+  mimeType: string;
+  fileName?: string;
+  sizeBytes: number;
+  sha256: string;
+  capturedAt?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface QueuedAttachment extends AttachmentDraft {
+  queuedAt: string;
+  attempts: number;
+  state: 'PENDING' | 'FAILED';
+  lastError?: string;
+}
+
+export interface UploadTarget {
+  url: string;
+  method: 'PUT';
+  headers: Record<string, string>;
+}
+
+export class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/** Evidence upload calls. Throw HttpError for HTTP failures, anything else for network failures. */
+export interface UploadTransport {
+  initiate(meta: Omit<AttachmentDraft, 'localUri'>): Promise<{ status: string; upload: UploadTarget | null }>;
+  put(target: UploadTarget, localUri: string): Promise<void>;
+  complete(id: string): Promise<{ status: string }>;
+}
+
 /** Transport to the API; the app supplies fetch-based functions. */
 export interface SyncTransport {
+  uploads?: UploadTransport;
   push(batch: { batchId: string; deviceId: string; platform: 'IOS' | 'ANDROID'; mutations: Array<Pick<QueuedMutation, 'clientMutationId' | 'type' | 'payload'>> }): Promise<{ results: PushResult[] }>;
   pull(): Promise<WorkPackage>;
   bundle(): Promise<ConfigBundle>;
@@ -99,6 +147,7 @@ const OUTBOX = 'outbox:';
 const K_PACKAGE = 'package';
 const K_BUNDLE = 'bundle';
 const K_RESULTS = 'results:';
+const ATTACH = 'attach:';
 
 /** Stable JSON (sorted keys) used for the signed-payload hash. */
 export function canonicalJson(value: unknown): string {
@@ -125,7 +174,7 @@ export class SyncClient {
 
   /** Queue a completed inspection; returns the ids the server will use. */
   async enqueueInspection(draft: InspectionDraft): Promise<{ inspectionId: string; clientMutationId: string }> {
-    const inspectionId = uuidv7();
+    const inspectionId = draft.id ?? uuidv7();
     const clientMutationId = uuidv7();
     const signedContent = canonicalJson({ ...draft, signature: undefined, id: inspectionId });
     const payload: QueuedMutation['payload'] = {
@@ -148,6 +197,69 @@ export class SyncClient {
     // Keys sort by UUID v7 => submission order is preserved.
     await this.store.set(`${OUTBOX}${clientMutationId}`, JSON.stringify(m));
     return { inspectionId, clientMutationId };
+  }
+
+  /** Queue a photo for upload. Owner ids are the device-generated inspection / finding ids. */
+  async addAttachment(a: AttachmentDraft): Promise<void> {
+    const q: QueuedAttachment = { ...a, queuedAt: new Date().toISOString(), attempts: 0, state: 'PENDING' };
+    await this.store.set(`${ATTACH}${a.id}`, JSON.stringify(q));
+  }
+
+  async attachments(): Promise<QueuedAttachment[]> {
+    const keys = await this.store.keys(ATTACH);
+    return Promise.all(keys.map(async (k) => JSON.parse((await this.store.get(k))!) as QueuedAttachment));
+  }
+
+  async removeAttachment(id: string) {
+    await this.store.delete(`${ATTACH}${id}`);
+  }
+
+  /**
+   * Upload queued photos: initiate (signed URL bound to size + SHA-256), PUT
+   * the bytes, complete. Network failures leave items queued; 4xx and server
+   * checksum rejections park them as FAILED. Returns the uploaded local URIs
+   * so the app can delete its copies.
+   */
+  async uploadAttachments(): Promise<{ uploaded: string[]; failed: number; pending: number; online: boolean }> {
+    const up = this.transport.uploads;
+    const uploaded: string[] = [];
+    let failed = 0;
+    if (!up) return { uploaded, failed, pending: (await this.attachments()).length, online: true };
+    const park = async (a: QueuedAttachment, err: string) => {
+      a.state = 'FAILED';
+      a.lastError = err;
+      await this.store.set(`${ATTACH}${a.id}`, JSON.stringify(a));
+      failed++;
+    };
+    for (const a of (await this.attachments()).filter((x) => x.state === 'PENDING')) {
+      a.attempts++;
+      try {
+        const { localUri: _uri, queuedAt: _q, attempts: _n, state: _s, lastError: _e, ...meta } = a;
+        const init = await up.initiate(meta);
+        if (init.status === 'PENDING' && init.upload) {
+          await up.put(init.upload, a.localUri);
+          const done = await up.complete(a.id);
+          if (done.status !== 'AVAILABLE') {
+            await park(a, `Server ${done.status}`);
+            continue;
+          }
+        } else if (init.status !== 'AVAILABLE') {
+          await park(a, `Server ${init.status}`);
+          continue;
+        }
+        await this.store.delete(`${ATTACH}${a.id}`);
+        uploaded.push(a.localUri);
+      } catch (err) {
+        if (err instanceof HttpError && err.status >= 400 && err.status < 500 && err.status !== 401 && err.status !== 408 && err.status !== 429) {
+          await park(a, `${err.status} ${err.message}`);
+          continue;
+        }
+        a.lastError = String((err as Error).message);
+        await this.store.set(`${ATTACH}${a.id}`, JSON.stringify(a));
+        return { uploaded, failed, pending: (await this.attachments()).filter((x) => x.state === 'PENDING').length, online: false };
+      }
+    }
+    return { uploaded, failed, pending: (await this.attachments()).filter((x) => x.state === 'PENDING').length, online: true };
   }
 
   async outbox(): Promise<QueuedMutation[]> {
@@ -182,7 +294,7 @@ export class SyncClient {
   }
 
   /** Push the outbox, then refresh the work package and configuration. */
-  async sync(opts: { batchSize?: number; refreshBundle?: boolean } = {}): Promise<{ pushed: number; failed: number; pending: number; online: boolean }> {
+  async sync(opts: { batchSize?: number; refreshBundle?: boolean } = {}): Promise<{ pushed: number; failed: number; pending: number; online: boolean; photosPending: number; uploaded: string[] }> {
     const batchSize = opts.batchSize ?? 50;
     let pushed = 0;
     let failed = 0;
@@ -215,15 +327,17 @@ export class SyncClient {
           }
         }
       }
+      const photos = await this.uploadAttachments();
       const pkg = await this.transport.pull();
       await this.store.set(K_PACKAGE, JSON.stringify(pkg));
       if (opts.refreshBundle || !(await this.store.get(K_BUNDLE))) {
         await this.store.set(K_BUNDLE, JSON.stringify(await this.transport.bundle()));
       }
-      return { pushed, failed, pending: await this.pendingCount(), online: true };
+      return { pushed, failed, pending: await this.pendingCount(), online: photos.online, photosPending: photos.pending, uploaded: photos.uploaded };
     } catch {
       // Network down or server unreachable: everything stays queued.
-      return { pushed, failed, pending: await this.pendingCount(), online: false };
+      const photosPending = (await this.attachments()).filter((a) => a.state === 'PENDING').length;
+      return { pushed, failed, pending: await this.pendingCount(), online: false, photosPending, uploaded: [] };
     }
   }
 

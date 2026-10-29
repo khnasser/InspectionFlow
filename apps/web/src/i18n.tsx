@@ -12,6 +12,12 @@ const dict = {
   evidence: { ar: 'الأدلة المصورة', en: 'Photo evidence' },
   addPhoto: { ar: 'إضافة صورة', en: 'Add photo' },
   pdf: { ar: 'تقرير PDF', en: 'PDF report' },
+  pdfPreview: { ar: 'معاينة PDF', en: 'PDF preview' },
+  issuedReports: { ar: 'التقارير الصادرة', en: 'Issued reports' },
+  verifyLink: { ar: 'رابط التحقق', en: 'Verification link' },
+  fingerprint: { ar: 'البصمة الرقمية', en: 'Fingerprint' },
+  generalPhotos: { ar: 'صور عامة للموقع', en: 'General site photos' },
+  uploading: { ar: 'قيد الرفع من الجهاز', en: 'Uploading from device' },
   tenant: { ar: 'الجهة', en: 'Organisation' },
   user: { ar: 'المستخدم', en: 'User' },
   devNote: { ar: 'وضع التطوير: الدخول بدون كلمة مرور. في الإنتاج يتم الدخول عبر Keycloak أو الهوية الرقمية.', en: 'Development mode: password-less sign-in. Production uses Keycloak or UAE PASS.' },
@@ -120,6 +126,9 @@ const labels: Record<string, Record<Lang, string>> = {
   NONE: { ar: 'لا يلزم', en: 'Not required' },
   MANAGER: { ar: 'المدير', en: 'Manager' },
   PENDING: { ar: 'بانتظار الاعتماد', en: 'Pending approval' },
+  RENDERING: { ar: 'قيد الإنشاء', en: 'Generating' },
+  FAILED: { ar: 'فشل', en: 'Failed' },
+  REVOKED: { ar: 'ملغى', en: 'Revoked' },
 };
 
 interface Ctx {

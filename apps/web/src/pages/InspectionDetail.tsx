@@ -1,4 +1,4 @@
-import { Button, Card, Checkbox, Descriptions, Input, Space, Table, Tag, Timeline, message } from 'antd';
+import { Button, Card, Checkbox, Descriptions, Empty, Image, Input, Space, Table, Tag, Timeline, Typography, message } from 'antd';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, session } from '../api';
@@ -12,6 +12,7 @@ export function InspectionDetail() {
   const nav = useNavigate();
   const { t, label, lang, i18n } = useI18n();
   const { data, loading, reload } = useLoad(() => api.get<any>(`/v1/inspections/${id}`), [id]);
+  const { data: reports } = useLoad(() => api.get<any[]>(`/v1/inspections/${id}/reports`), [id, data?.status]);
   const pendingStep = useMemo(() => {
     if (!data) return null;
     const firstOpen = (data.approvals ?? []).find((a: any) => !a.decision);
@@ -48,7 +49,15 @@ export function InspectionDetail() {
       <Card
         title={`${data.logNumber} · #${data.cycleNumber}`}
         extra={
-          <Button onClick={() => api.openHtml(`/v1/inspections/${id}/report.html?lang=${lang}`).catch(notifyError)}>{t('report')}</Button>
+          <Space wrap>
+            <Button onClick={() => api.openHtml(`/v1/inspections/${id}/report.html?lang=${lang}`).catch(notifyError)}>{t('report')}</Button>
+            <Button
+              type={reports?.some((r) => r.status === 'ISSUED') ? 'primary' : 'default'}
+              onClick={() => api.openPdf(`/v1/inspections/${id}/report.pdf?lang=${lang}`).catch(notifyError)}
+            >
+              {reports?.some((r) => r.status === 'ISSUED') ? t('pdf') : t('pdfPreview')}
+            </Button>
+          </Space>
         }
       >
         <Descriptions column={{ xs: 1, md: 3 }} size="small">
@@ -106,6 +115,57 @@ export function InspectionDetail() {
           ]}
         />
       </Card>
+
+      <Card title={t('evidence')}>
+        {(data.evidence ?? []).length === 0 ? (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('empty')} />
+        ) : (
+          <Image.PreviewGroup>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              {[...data.findings.map((f: any) => ({ id: f.id, title: `${f.violationCode} — ${i18n(details[f.id]?.description_i18n, '')}` })),
+                { id: data.inspectionId, title: t('generalPhotos') }]
+                .map((g) => ({ ...g, items: (data.evidence ?? []).filter((e: any) => e.ownerId === g.id) }))
+                .filter((g) => g.items.length)
+                .map((g) => (
+                  <div key={g.id}>
+                    <Typography.Text strong>{g.title}</Typography.Text>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+                      {g.items.map((e: any) =>
+                        e.url && e.mimeType.startsWith('image/') ? (
+                          <Image key={e.id} src={e.url} width={112} height={84} style={{ objectFit: 'cover', borderRadius: 6 }}
+                            alt={e.fileName ?? ''} title={e.capturedAt ? date(e.capturedAt, lang) : undefined} />
+                        ) : (
+                          <Tag key={e.id}>{e.url ? <a href={e.url} target="_blank" rel="noreferrer">{e.fileName ?? e.mimeType}</a> : t('uploading')}</Tag>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </Space>
+          </Image.PreviewGroup>
+        )}
+      </Card>
+
+      {(reports ?? []).length > 0 && (
+        <Card title={t('issuedReports')}>
+          {(reports ?? []).map((r) => (
+            <Descriptions key={r.id} column={{ xs: 1, md: 2 }} size="small">
+              <Descriptions.Item label={t('number')}><bdi>{r.reportNumber}</bdi></Descriptions.Item>
+              <Descriptions.Item label={t('status')}><Tag color={r.status === 'ISSUED' ? 'green' : 'default'}>{label(r.status)}</Tag></Descriptions.Item>
+              {r.verifyUrl && (
+                <Descriptions.Item label={t('verifyLink')}>
+                  <a href={r.verifyUrl} target="_blank" rel="noreferrer" dir="ltr">{r.verificationCode}</a>
+                </Descriptions.Item>
+              )}
+              {r.pdfSha256 && (
+                <Descriptions.Item label={t('fingerprint')}>
+                  <Typography.Text code copyable={{ text: r.pdfSha256 }} dir="ltr">{`${r.pdfSha256.slice(0, 16)}…`}</Typography.Text>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          ))}
+        </Card>
+      )}
 
       <Card title={t('approvals')}>
         <Timeline

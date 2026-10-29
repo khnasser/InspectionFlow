@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { deleteLocal } from '../evidence';
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import type { SyncClient, WorkPackage } from '@inspectionflow/sync-client';
@@ -33,6 +34,7 @@ export function TasksScreen({
   const sync = useCallback(async () => {
     setBusy(true);
     const r = await client.sync({ refreshBundle: true });
+    await deleteLocal(r.uploaded);
     setOnline(r.online);
     await refreshLocal();
     setBusy(false);

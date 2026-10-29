@@ -5,3 +5,4 @@ coverage/
 *.log
 .expo/
 apps/mobile/node_modules/
+var/

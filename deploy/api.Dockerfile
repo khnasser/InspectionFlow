@@ -19,6 +19,7 @@ COPY --from=build /app/packages/engine packages/engine
 COPY --from=build /app/apps/api/dist apps/api/dist
 COPY --from=build /app/apps/api/package.json apps/api/package.json
 COPY db db
+RUN mkdir -p /data/storage && chown node:node /data/storage
 USER node
 EXPOSE 3000
 CMD ["node", "apps/api/dist/main.js"]

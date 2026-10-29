@@ -56,6 +56,8 @@ beforeAll(async () => {
     OIDC_AUDIENCE: AUDIENCE,
     OIDC_JWKS_URL: `http://127.0.0.1:${port}/certs`,
     NODE_ENV: 'test',
+    REPORT_WORKER: 'off',
+    STORAGE_LOCAL_DIR: join(tmpdir(), 'inspectionflow-test-storage'),
   });
   app = await NestFactory.create(AppModule.register(config), { logger: false });
   await app.init();

@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import { InspectionResult, uuidv7 } from '@inspectionflow/engine';
-import type { ConfigBundle, FindingDraft, SyncClient, WorkPackage } from '@inspectionflow/sync-client';
+import type { AttachmentDraft, ConfigBundle, FindingDraft, SyncClient, WorkPackage } from '@inspectionflow/sync-client';
+import { Image } from 'react-native';
+import { capturePhoto, deleteLocal } from '../evidence';
 import { SignaturePad } from '../components/SignaturePad';
 import { i18n, label, Lang, tr } from '../i18n';
 
@@ -22,6 +24,9 @@ export function InspectionScreen({
   onDone: () => void;
 }) {
   const startedAt = useMemo(() => new Date().toISOString(), []);
+  // Generated up front so photos can reference the inspection before it is queued.
+  const inspectionId = useMemo(() => uuidv7(), []);
+  const [photos, setPhotos] = useState<AttachmentDraft[]>([]);
   const [bundle, setBundle] = useState<ConfigBundle | null>(null);
   const [pkg, setPkg] = useState<WorkPackage | null>(null);
   const [findings, setFindings] = useState<FindingDraft[]>([]);
@@ -56,6 +61,28 @@ export function InspectionScreen({
       .catch((e) => setError(String(e.message ?? e)));
   }, [client, process, inspectable.id, findings]);
 
+  async function addPhoto(ownerType: 'FINDING' | 'INSPECTION', ownerId: string) {
+    try {
+      const p = await capturePhoto({ ownerType, ownerId });
+      if (p) setPhotos((x) => [...x, p]);
+    } catch (e) {
+      Alert.alert(tr(lang, 'evidence'), String((e as Error).message ?? e));
+    }
+  }
+
+  const PhotoStrip = ({ ownerId, ownerType }: { ownerId: string; ownerType: 'FINDING' | 'INSPECTION' }) => (
+    <View style={[s.row, { flexWrap: 'wrap', marginTop: 6 }]}>
+      {photos.filter((p) => p.ownerId === ownerId).map((p) => (
+        <TouchableOpacity key={p.id} onLongPress={() => { setPhotos((x) => x.filter((y) => y.id !== p.id)); deleteLocal([p.localUri]); }}>
+          <Image source={{ uri: p.localUri }} style={s.thumb} />
+        </TouchableOpacity>
+      ))}
+      <TouchableOpacity style={s.chip} onPress={() => addPhoto(ownerType, ownerId)}>
+        <Text style={s.chipText}>{`📷 ${tr(lang, 'takePhoto')}`}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const update = (id: string, patch: Partial<FindingDraft>) => setFindings((fs) => fs.map((f) => (f.id === id ? { ...f, ...patch } : f)));
 
   async function submit() {
@@ -67,7 +94,12 @@ export function InspectionScreen({
     const signatureSha256 = signature
       ? await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, signature)
       : undefined;
+    // Photos of removed findings are dropped; the rest are queued before the inspection.
+    const keep = photos.filter((p) => p.ownerId === inspectionId || findings.some((f) => f.id === p.ownerId));
+    await deleteLocal(photos.filter((p) => !keep.includes(p)).map((p) => p.localUri));
+    for (const p of keep) await client.addAttachment(p);
     await client.enqueueInspection({
+      id: inspectionId,
       processCode: process.code,
       inspectableId: inspectable.id,
       kind: openFindings.length ? 'FOLLOW_UP' : 'SCHEDULED',
@@ -85,7 +117,8 @@ export function InspectionScreen({
           : undefined,
     });
     const r = await client.sync();
-    Alert.alert(r.online && r.pending === 0 ? tr(lang, 'sent') : tr(lang, 'queued'));
+    await deleteLocal(r.uploaded);
+    Alert.alert(r.online && r.pending === 0 && r.photosPending === 0 ? tr(lang, 'sent') : tr(lang, 'queued'));
     onDone();
   }
 
@@ -150,6 +183,7 @@ export function InspectionScreen({
                 })}
               </View>
               <TextInput style={s.input} placeholder={tr(lang, 'remarks')} value={f.remarks} onChangeText={(t) => update(f.id, { remarks: t })} />
+              <PhotoStrip ownerType="FINDING" ownerId={f.id} />
             </View>
           );
         })}
@@ -163,6 +197,10 @@ export function InspectionScreen({
               </TouchableOpacity>
             ))}
         </View>
+      </Section>
+
+      <Section title={tr(lang, 'evidence')}>
+        <PhotoStrip ownerType="INSPECTION" ownerId={inspectionId} />
       </Section>
 
       {result && findings.length > 0 && (
@@ -205,6 +243,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 const s = StyleSheet.create({
+  thumb: { width: 64, height: 64, borderRadius: 6, marginEnd: 6, marginBottom: 6, backgroundColor: '#dde2e8' },
   wrap: { flex: 1, backgroundColor: '#f3f5f8' },
   header: { backgroundColor: '#0b2545', paddingTop: 48, paddingHorizontal: 16, paddingBottom: 14 },
   title: { color: '#fff', fontSize: 18, fontWeight: '700', marginTop: 8, textAlign: 'left' },

@@ -28,7 +28,11 @@ jobs:
       - run: npm ci
       - run: npm run build -w @inspectionflow/engine && npm run build -w @inspectionflow/sync-client
       - run: npm run typecheck
+      # PDF report tests render with local Chromium (production uses Gotenberg).
+      - run: npm install -g playwright@1.63.0 && npx -y playwright@1.63.0 install --with-deps chromium
       - run: npm test
+        env:
+          NODE_PATH: /usr/local/lib/node_modules
       - run: npm run build -w @inspectionflow/web
 
   mobile:

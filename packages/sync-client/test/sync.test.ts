@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { describe, expect, it } from 'vitest';
 import { ViolationRule } from '@inspectionflow/engine';
-import { ConfigBundle, InspectionDraft, MemoryStore, PushResult, SyncClient, SyncTransport, WorkPackage } from '../src';
+import { AttachmentDraft, ConfigBundle, HttpError, InspectionDraft, MemoryStore, PushResult, SyncClient, SyncTransport, WorkPackage } from '../src';
 
 const sha = async (t: string) => createHash('sha256').update(t).digest('hex');
 
@@ -29,6 +29,7 @@ const pkg: WorkPackage = { serverTime: '2027-01-01T00:00:00Z', tasks: [{ id: 'ta
 
 /** Fake server: can be offline, can reject by process code, remembers applied ids. */
 class FakeTransport implements SyncTransport {
+  uploads?: SyncTransport['uploads'];
   online = true;
   applied = new Set<string>();
   pushes = 0;
@@ -131,5 +132,82 @@ describe('SyncClient', () => {
   it('provisional evaluation needs a cached configuration', async () => {
     const c = new SyncClient(new MemoryStore(), new FakeTransport(), 'd', 'ANDROID', sha);
     await expect(c.provisional(draft())).rejects.toThrow(/sync once/);
+  });
+});
+
+describe('evidence attachments', () => {
+  class FakeUploads {
+    online = true;
+    objects = new Map<string, string>();
+    puts = 0;
+    async initiate(meta: { id: string; sha256: string; mimeType: string }) {
+      if (!this.online) throw new Error('network down');
+      if (meta.mimeType === 'application/x-msdownload') throw new HttpError(400, 'unsupported file type');
+      if (this.objects.get(meta.id) === 'AVAILABLE') return { status: 'AVAILABLE', upload: null };
+      this.objects.set(meta.id, 'PENDING');
+      return { status: 'PENDING', upload: { url: `https://s3/${meta.id}`, method: 'PUT' as const, headers: {} } };
+    }
+    async put(_t: unknown, localUri: string) {
+      if (!this.online) throw new Error('network down');
+      this.puts++;
+      if (localUri.includes('corrupt')) return;
+    }
+    async complete(id: string) {
+      const corrupt = id.startsWith('corrupt');
+      this.objects.set(id, corrupt ? 'REJECTED' : 'AVAILABLE');
+      return { status: corrupt ? 'REJECTED' : 'AVAILABLE' };
+    }
+  }
+
+  const photo = (id: string, localUri = `file:///photos/${id}.jpg`): AttachmentDraft => ({
+    id,
+    ownerType: 'FINDING',
+    ownerId: 'finding-1',
+    localUri,
+    mimeType: 'image/jpeg',
+    sizeBytes: 1000,
+    sha256: 'a'.repeat(64),
+  });
+
+  it('keeps photos queued while offline and uploads them later, once', async () => {
+    const t = new FakeTransport();
+    const uploads = new FakeUploads();
+    t.uploads = uploads;
+    const c = new SyncClient(new MemoryStore(), t, 'device-1', 'ANDROID', sha);
+    await c.addAttachment(photo('p1'));
+    await c.addAttachment(photo('p2'));
+
+    uploads.online = false;
+    expect(await c.uploadAttachments()).toMatchObject({ uploaded: [], online: false, pending: 2 });
+
+    uploads.online = true;
+    const r = await c.uploadAttachments();
+    expect(r).toMatchObject({ failed: 0, pending: 0, online: true });
+    expect(r.uploaded).toEqual(['file:///photos/p1.jpg', 'file:///photos/p2.jpg']);
+    expect(await c.attachments()).toHaveLength(0);
+
+    // A retry after a lost response does not upload twice.
+    await c.addAttachment(photo('p1'));
+    expect((await c.uploadAttachments()).uploaded).toHaveLength(1);
+    expect(uploads.puts).toBe(2);
+  });
+
+  it('parks rejected files for the inspector instead of retrying forever', async () => {
+    const t = new FakeTransport();
+    t.uploads = new FakeUploads();
+    const c = new SyncClient(new MemoryStore(), t, 'device-1', 'IOS', sha);
+    await c.addAttachment({ ...photo('bad'), mimeType: 'application/x-msdownload' });
+    await c.addAttachment(photo('corrupt-1', 'file:///photos/corrupt.jpg'));
+    const r = await c.uploadAttachments();
+    expect(r).toMatchObject({ failed: 2, pending: 0 });
+    const parked = await c.attachments();
+    expect(parked.map((a) => a.state)).toEqual(['FAILED', 'FAILED']);
+    expect(parked.find((a) => a.id === 'bad')!.lastError).toContain('400');
+  });
+
+  it('lets the app choose the inspection id so photos can reference it before queueing', async () => {
+    const c = new SyncClient(new MemoryStore(), new FakeTransport(), 'device-1', 'IOS', sha);
+    const { inspectionId } = await c.enqueueInspection(draft({ id: 'pre-generated-id' }));
+    expect(inspectionId).toBe('pre-generated-id');
   });
 });
