@@ -1,0 +1,44 @@
+# Local stack: PostgreSQL + API + web. Development settings only.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: inspectionflow
+    ports: ['5432:5432']
+    volumes: ['dbdata:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      retries: 10
+
+  # One-off: apply migrations and seed the demo tenant (runs as the DB owner).
+  migrate:
+    image: node:22-alpine
+    depends_on: { db: { condition: service_healthy } }
+    working_dir: /repo
+    volumes: ['.:/repo']
+    environment:
+      DATABASE_ADMIN_URL: postgres://postgres:postgres@db:5432/inspectionflow
+    command: sh -c "npm ci && npm run build -w @inspectionflow/engine && npm run db:migrate && npm run db:seed"
+
+  api:
+    build: { context: ., dockerfile: deploy/api.Dockerfile }
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    environment:
+      DATABASE_URL: postgres://inspectionflow_api:inspectionflow_api@db:5432/inspectionflow
+      AUTH_MODE: dev
+      JWT_DEV_SECRET: change-me-dev-secret-at-least-32-characters
+      PAYMENT_WEBHOOK_SECRET: change-me-webhook-secret
+      PUBLIC_BASE_URL: http://localhost:8080
+    ports: ['3000:3000']
+
+  web:
+    build: { context: ., dockerfile: deploy/web.Dockerfile }
+    depends_on: [api]
+    ports: ['8080:8080']
+
+volumes:
+  dbdata:

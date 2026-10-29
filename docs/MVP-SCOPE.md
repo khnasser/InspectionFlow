@@ -1,0 +1,33 @@
+# MVP scope and traceability
+
+Status: **Done** = implemented and covered by automated tests; **Partial** = implemented without the full production integration; **Next** = planned for a later phase of the blueprint.
+
+| PRD / blueprint item | Status | Where |
+| --- | --- | --- |
+| Multi-tenant SaaS, tenant isolation (PRD 3.1) | Done | `db/migrations/001_core_schema.sql` §10 (RLS on every tenant table), `apps/api/src/common/db.service.ts`; tests "tenant isolation and audit" |
+| UAE data residency | Partial | Deployment concern; `tenants.data_region`; deploy to a UAE region (blueprint §3) |
+| Arabic-first UI, RTL | Done (web), Done (mobile, typecheck + bundle) | `apps/web/src/i18n.tsx`, `apps/mobile/src/i18n.ts`, Arabic HTML report |
+| Inspectables and parties, many-to-many links, add party during inspection (PRD 3.2) | Done | `registry.controller.ts`, `InspectionService.ensurePartyLinks` |
+| Routine and service processes, configurable (PRD 3.3) | Partial | `inspection_processes`; routine/random/follow-up flows done; paid service-request flow (application, prepaid block) is Next |
+| Mobile inspection flow, offline sync (PRD 3.4) | Done | `packages/sync-client`, `apps/mobile`, `/v1/sync/push`, `/v1/sync/pull` |
+| Parallel tasks (FORK/JOIN) | Next | Blueprint §6.3 (`inspection-service` BPMN with parallel section reviews) |
+| Violation engine: repetition strategies, window, escalation, multiplier, yearly reset (PRD 3.5, §5) | Done | `packages/engine`; 18 unit tests; escalation e2e test |
+| Severity override with approval, counter adjustment (construction-safety rules) | Done | `ReviewService.applyOverrideDecisions`; e2e test |
+| Committee and amount-based approval chain (construction-safety and incident rules) | Done | `approval_thresholds`, `approvalChainFor`; e2e test |
+| Task list `/my-tasks?includeDelegated=true` (PRD 3.6) | Done | `GET /v1/me/tasks?includeDelegated=true` |
+| User delegation, auto-resolve at assignment (PRD 3.7) | Done | `AssignmentService.resolveAssignee`, exclusion constraint against overlaps |
+| Team manager dashboard, bulk reassignment (PRD 3.8) | Done | `GET /v1/team/dashboard`, `POST /v1/tasks/bulk-reassign` |
+| Digital signature, clear by senior with reason, edit lock (PRD 3.9) | Done | `client_signatures`, `POST /v1/inspections/:id/signature/clear`; signature pad in mobile app |
+| UAE PASS signing | Next | Blueprint §8 |
+| Billing: payment advice per inspection, statuses (PRD 3.10) | Done | `InspectionService.finalizeApproved`, `payment_advices` |
+| Payment gateways PayTabs / Checkout.com / Network International / Stripe | Partial | Signed, idempotent webhook contract done (`POST /v1/webhooks/payments`); real adapters Next |
+| Document storage MinIO/S3 (PRD 3.11) | Next | Schema ready (`documents`, `document_versions`) |
+| Arabic PDF / Excel reports (PRD 3.12) | Partial | Bilingual HTML report done (`/report.html`); PDF rendering worker Next |
+| CRM sync HubSpot / Salesforce / Zoho (PRD 8) | Partial | Transactional outbox events written; connectors Next |
+| Notifications SMS / email | Partial | `notifications` rows queued; delivery worker Next |
+| Audit of all actions (PRD 11) | Done | Hash-chained, append-only `audit_logs`; verify endpoint; tamper test |
+| Security: JWT, RLS, AES-256 | Partial | JWT (dev HS256 / OIDC JWKS), RLS, SQLCipher on device; at-rest encryption is a hosting setting |
+| Performance: task list < 500 ms | Partial | Indexed inbox query; load test (k6) Next |
+| Oracle 19c support | Next | Sovereign edition only (blueprint §2) |
+| Configuration Studio | Next | Configuration seeded by `apps/api/scripts/seed.ts` |
+| Client portal | Next | Blueprint §6.12 |
