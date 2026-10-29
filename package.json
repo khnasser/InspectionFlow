@@ -1,0 +1,13 @@
+{
+  "name": "inspectionflow",
+  "private": true,
+  "version": "0.1.0",
+  "description": "InspectionFlow MVP - Arabic-first inspection and enforcement platform",
+  "workspaces": ["packages/*", "apps/api", "apps/web"],
+  "scripts": {
+    "build": "npm run build -w @inspectionflow/engine && npm run build -w @inspectionflow/api && npm run build -w @inspectionflow/web",
+    "test": "npm test -w @inspectionflow/engine && npm test -w @inspectionflow/api",
+    "lint:types": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": { "node": ">=20" }
+}
