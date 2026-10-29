@@ -1,8 +1,8 @@
 /**
  * Evidence upload against a real S3-compatible server (moto in CI, MinIO or
  * AWS when pointed at one). Skipped unless S3_TEST_ENDPOINT is set, e.g.
- *   pip install "moto[server]" && moto_server -p 4566 &
- *   S3_TEST_ENDPOINT=http://localhost:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test npm test -w @inspectionflow/api
+ *   pip install "moto[server]" && moto_server -H 127.0.0.1 -p 4566 &
+ *   S3_TEST_ENDPOINT=http://127.0.0.1:4566 AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test npm test -w @inspectionflow/api
  */
 import 'reflect-metadata';
 import { INestApplication } from '@nestjs/common';

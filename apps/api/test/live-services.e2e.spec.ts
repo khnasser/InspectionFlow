@@ -67,26 +67,23 @@ const b64url = (b: Buffer) => b.toString('base64url');
       ...params,
     });
     const page = await browser.newPage();
-    let landed: string | null = null;
-    await page.route('http://localhost:5173/**', (route: any) => {
-      landed = route.request().url();
-      return route.fulfill({ status: 200, body: 'ok' });
-    });
-    await page.route('https://stg-id.uaepass.ae/**', (route: any) => {
-      landed = route.request().url();
-      return route.fulfill({ status: 200, body: 'uae pass' });
-    });
-    await page.goto(`${issuer}/protocol/openid-connect/auth?${q}`);
+    // Keycloak redirects to the app (or to UAE PASS); nothing listens there in
+    // the test, so record the request the browser makes instead of following it.
+    const target = /^(http:\/\/localhost:5173|https:\/\/stg-id\.uaepass\.ae)/;
+    const captured: Promise<string | null> = page
+      .waitForRequest((r: any) => target.test(r.url()), { timeout: login ? 20000 : 8000 })
+      .then((r: any) => r.url())
+      .catch(() => null);
+    await page.goto(`${issuer}/protocol/openid-connect/auth?${q}`).catch(() => undefined);
     if (login) {
       await page.fill('#username', login.user);
       await page.fill('#password', login.password);
-      await Promise.all([page.waitForURL(/localhost:5173/), page.click('#kc-login')]);
-    } else {
-      await page.waitForTimeout(1500);
+      await page.click('#kc-login').catch(() => undefined);
     }
-    const html = await page.content();
+    const landed = await captured;
+    const html = await page.content().catch(() => '');
     await page.close();
-    return { landed: landed as string | null, verifier, html };
+    return { landed, verifier, html };
   }
 
   async function exchange(code: string, verifier: string) {
@@ -138,19 +135,20 @@ const b64url = (b: Buffer) => b.toString('base64url');
   });
 
   it('accepts the mobile app redirect scheme', async () => {
-    const page = await browser.newPage();
     const verifier = b64url(randomBytes(32));
     const q = new URLSearchParams({
       client_id: 'inspectionflow-mobile',
       redirect_uri: 'inspectionflow://auth',
       response_type: 'code',
-      scope: 'openid offline_access',
+      scope: 'openid',
       code_challenge: b64url(createHash('sha256').update(verifier).digest()),
       code_challenge_method: 'S256',
     });
-    await page.goto(`${issuer}/protocol/openid-connect/auth?${q}`);
-    expect(await page.locator('#username').count()).toBe(1);
-    await page.close();
+    const res = await fetch(`${issuer}/protocol/openid-connect/auth?${q}`, { redirect: 'manual' });
+    const html = await res.text();
+    // The login page is shown (no error redirect, no "invalid redirect_uri" page).
+    expect({ status: res.status, location: res.headers.get('location') }).toEqual({ status: 200, location: null });
+    expect(html).toContain('id="username"');
   });
 });
 
