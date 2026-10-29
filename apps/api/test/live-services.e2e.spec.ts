@@ -107,8 +107,17 @@ const b64url = (b: Buffer) => b.toString('base64url');
     expect(claims.tenant).toBe('DEMO-AUTH');
     expect(tokens.refresh_token).toBeTruthy();
 
+    // Independent check of the signature against the realm's published keys.
+    const { createRemoteJWKSet, jwtVerify } = await import('jose');
+    await jwtVerify(tokens.access_token, createRemoteJWKSet(new URL(`${issuer}/protocol/openid-connect/certs`)), {
+      issuer,
+      audience: 'inspectionflow-api',
+    });
+
     const http = app.getHttpServer();
-    const me = (await request(http).get('/v1/me').set('Authorization', `Bearer ${tokens.access_token}`).expect(200)).body;
+    const meRes = await request(http).get('/v1/me').set('Authorization', `Bearer ${tokens.access_token}`);
+    expect({ status: meRes.status, body: meRes.status === 200 ? 'ok' : meRes.body }).toEqual({ status: 200, body: 'ok' });
+    const me = meRes.body;
     expect(me.roles).toContain('INSPECTOR');
     expect(me.tenantId).toBeTruthy();
     const tasks = await request(http).get('/v1/me/tasks').set('Authorization', `Bearer ${tokens.access_token}`).expect(200);

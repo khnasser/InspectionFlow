@@ -47,7 +47,7 @@ export class TokenService {
   constructor(@Inject(APP_CONFIG) private readonly config: AppConfig, private readonly db: DbService) {
     this.secret = new TextEncoder().encode(config.devJwtSecret);
     if (config.authMode === 'oidc') {
-      const url = config.oidcJwksUrl ?? `${config.oidcIssuer}/protocol/openid-connect/certs`;
+      const url = config.oidcJwksUrl || `${config.oidcIssuer}/protocol/openid-connect/certs`;
       this.jwks = createRemoteJWKSet(new URL(url));
     }
   }
@@ -104,8 +104,10 @@ export class TokenService {
         audience: this.config.oidcAudience,
         algorithms: ['RS256', 'PS256', 'ES256'],
       }));
-    } catch {
-      throw new UnauthorizedException('Invalid or expired token');
+    } catch (err) {
+      // The reason (expired, wrong audience, unknown key …) helps operators; the token itself is never echoed.
+      const reason = (err as { code?: string }).code ?? (err as Error).name;
+      throw new UnauthorizedException(`Invalid or expired token (${reason})`);
     }
     const tenant = payload[this.config.tenantClaim];
     if (typeof payload.sub !== 'string' || !payload.sub) throw new UnauthorizedException('Token has no subject');
