@@ -672,7 +672,8 @@ export class InspectionService {
     const summary = await this.summary(tx, inspectionId);
     const head = await tx.one(
       `SELECT i.completed_at, i.general_remarks, i.site_status, i.is_signed, i.edit_locked, i.performed_by,
-              u.display_name AS inspector, ins.id AS inspectable_id, ins.name AS inspectable_name, ins.identifier,
+              u.display_name AS inspector, ins.id AS inspectable_id, ins.name AS inspectable_name,
+              ins.name_i18n AS inspectable_name_i18n, ins.identifier,
               p.code AS process_code, p.name_i18n AS process_name
          FROM inspections i JOIN inspection_logs l ON l.id = i.log_id
          JOIN inspectables ins ON ins.id = l.inspectable_id
